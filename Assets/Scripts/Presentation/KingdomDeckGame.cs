@@ -633,7 +633,16 @@ namespace KingdomDeck.Presentation
             }
             if (d.Kind == DecisionKind.BuyPhase)
             {
-                if (game.CanBuy(Me, t.CardId)) Submit(Command.Buy(t.CardId));
+                if (game.CanBuy(Me, t.CardId))
+                {
+                    Submit(Command.Buy(t.CardId));
+                    // 남은 구매가 0이 되면 연출을 기다리지 않고 바로 공급처를 닫는다 (직접 연 경우도)
+                    if (game.Buys <= 0)
+                    {
+                        SetSupplyOpen(false);
+                        supplyAuto = false;
+                    }
+                }
                 else if (game.Buys <= 0) Toast("구매 횟수가 없습니다", Palette.TextDim);
                 else if (game.SupplyCount(t.CardId) <= 0) Toast("더미가 비었습니다", Palette.TextDim);
                 else Toast("코인이 부족합니다 (" + game.EffectiveCost(t.CardId) + " 필요)", Palette.TextDim);
