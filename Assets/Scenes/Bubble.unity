@@ -1124,11 +1124,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BubbleBot
   target: {fileID: 380891917}
-  moveSpeed: 3.5
-  placeCooldown: 1.5
-  attackDistance: 3
-  wanderChance: 0.25
-  escapeMargin: 0.4
+  moveSpeed: 4
+  placeCooldown: 1.2
+  safetyMargin: 0.15
+  playerCellsPerSecond: 4.5
+  randomness: 0.1
 --- !u!23 &1145787557
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -1884,7 +1884,7 @@ MonoBehaviour:
   balloonPrefab: {fileID: 5072429114408650603, guid: 2fdd953555ad4d643a0343ff0003ed83, type: 3}
   streamPrefab: {fileID: 6089228027524126896, guid: f5d5834e0e2b943428854de4a13bca2e, type: 3}
   balloonFuse: 2.5
-  balloonRange: 2
+  balloonRange: 4
   streamDuration: 0.5
 --- !u!4 &1898446024
 Transform:

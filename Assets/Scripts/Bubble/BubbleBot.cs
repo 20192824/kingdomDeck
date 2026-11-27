@@ -1,10 +1,13 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-// 테스트용 상대 봇: 격자를 한 칸씩 이동하며
-// 1) 위험한 칸(곧 물줄기가 지나갈 칸)에 있으면 가장 가까운 안전한 칸으로 도망가고
-// 2) 플레이어가 가까우면, 피할 곳이 있을 때만 물풍선을 놓고
-// 3) 그 외에는 위험한 칸을 피하면서 플레이어 쪽으로 다가갑니다.
+// 테스트용 상대 봇. 칸 단위로 이동하며 칸에 도착할 때마다 다음 행동을 다시 정합니다.
+// 1) 피하기: 물이 닿을 칸에 있으면, 물이 도착하는 "시간"까지 계산해서
+//    제때 빠져나갈 수 있는 경로로 가장 가까운 안전한 칸에 갑니다. (연쇄 폭발 포함)
+// 2) 공격: 여기 풍선을 놓으면 플레이어가 물줄기 범위에 들어가고, 자기는 피할 수 있을 때만 놓습니다.
+//    플레이어가 피할 곳이 하나도 없어지는 "가두기" 상황이면 망설이지 않습니다.
+// 3) 자리 잡기: 플레이어와 같은 줄(가로/세로)이면서 사거리 안이고, 사이에 풍선이 없는 칸으로 이동합니다.
+// 4) 그 외에는 안전한 칸으로 돌아다닙니다.
 [RequireComponent(typeof(Bomber))]
 public class BubbleBot : MonoBehaviour
 {
@@ -12,28 +15,31 @@ public class BubbleBot : MonoBehaviour
     private Bomber target;
 
     [SerializeField, Tooltip("이동 속도 (초당 칸)")]
-    private float moveSpeed = 3.5f;
+    private float moveSpeed = 4f;
 
     [SerializeField, Tooltip("물풍선을 놓은 뒤 다음 물풍선까지 최소 대기 시간 (초)")]
-    private float placeCooldown = 1.5f;
+    private float placeCooldown = 1.2f;
 
-    [SerializeField, Tooltip("플레이어와 이 칸 수 이내면 물풍선을 노립니다 (맨해튼 거리)")]
-    private int attackDistance = 3;
+    [SerializeField, Tooltip("물줄기 시간 계산에 두는 여유 (초). 클수록 조심스럽게 피합니다.")]
+    private float safetyMargin = 0.15f;
 
-    [SerializeField, Tooltip("다가갈 때 일부러 엉뚱한 칸으로 갈 확률 (0~1)")]
-    [Range(0f, 1f)] private float wanderChance = 0.25f;
+    [SerializeField, Tooltip("플레이어가 1초에 움직일 수 있다고 볼 칸 수 (가두기 판단용)")]
+    private float playerCellsPerSecond = 4.5f;
 
-    [SerializeField, Tooltip("도망갈 때 남겨 둘 시간 여유 (초)")]
-    private float escapeMargin = 0.4f;
+    [SerializeField, Tooltip("가끔 일부러 실수할 확률 (0 = 항상 최선, 1 = 항상 엉뚱하게)")]
+    [Range(0f, 1f)] private float randomness = 0.1f;
 
     private Bomber bomber;
     private BubbleBoard board;
     private Vector2Int currentCell;
     private Vector2Int targetCell;
-    private readonly Queue<Vector2Int> path = new Queue<Vector2Int>();
     private float nextPlaceTime;
     private float idleUntil;
     private float height;
+
+    public string LastAction { get; private set; } = "";
+
+    float StepTime => 1f / Mathf.Max(0.1f, moveSpeed);
 
     void Awake()
     {
@@ -72,121 +78,158 @@ public class BubbleBot : MonoBehaviour
 
     void Decide()
     {
-        HashSet<Vector2Int> danger = board.GetDangerCells();
+        BubbleBoard.DangerMap danger = board.GetDangerMap();
 
-        // 1) 위험하면 도망
-        if (danger.Contains(currentCell))
+        // 1) 피하기
+        if (danger.IsDangerous(currentCell))
         {
-            if (path.Count == 0 || danger.Contains(LastOf(path)))
-                SetPath(FindPath(currentCell, c => !danger.Contains(c)));
-            StepOrIdle();
+            List<Vector2Int> escape = FindTimedPath(currentCell, c => !danger.IsDangerous(c), danger, null)
+                                      ?? FindPath(currentCell, c => !danger.IsDangerous(c));
+            if (escape != null && escape.Count > 0) { targetCell = escape[0]; LastAction = "escape"; }
+            else { idleUntil = Time.time + 0.05f; LastAction = "stuck"; }
             return;
         }
 
-        // 지금 안전하면 도망 경로는 버립니다.
-        path.Clear();
+        // 2) 공격
+        if (TryAttack()) return;
 
-        // 2) 플레이어가 가까우면 공격 (피할 곳이 있을 때만)
-        if (ShouldAttack() && TryAttack(danger)) { StepOrIdle(); return; }
+        bool playerAlive = target != null && !target.IsDead;
 
-        // 3) 이동: 위험한 칸은 피하고 플레이어 쪽으로
-        Vector2Int? next = ChooseWanderStep(danger);
-        if (next.HasValue) targetCell = next.Value;
-        else idleUntil = Time.time + 0.2f;
+        // 3) 자리 잡기 (가끔은 일부러 돌아다님)
+        if (playerAlive && Random.value >= randomness)
+        {
+            Vector2Int p = target.Cell;
+            System.Func<Vector2Int, bool> isAttackSpot = c => IsAttackSpot(c, p) && !danger.IsDangerous(c);
+
+            if (isAttackSpot(currentCell))
+            {
+                // 이미 좋은 자리: 풍선 대기 시간이 끝날 때까지 잠깐 기다립니다.
+                idleUntil = Time.time + 0.1f;
+                LastAction = "hold";
+                return;
+            }
+
+            List<Vector2Int> path = FindTimedPath(currentCell, isAttackSpot, danger, null);
+            if (path != null && path.Count > 0) { targetCell = path[0]; LastAction = "approach"; return; }
+        }
+
+        // 4) 안전하게 돌아다니기
+        Vector2Int? step = SafeRandomStep(danger);
+        if (step.HasValue) { targetCell = step.Value; LastAction = "wander"; }
+        else { idleUntil = Time.time + 0.15f; LastAction = "wait"; }
     }
 
-    bool ShouldAttack()
+    bool TryAttack()
     {
-        if (target == null || target.IsDead || !bomber.CanPlaceBalloon || Time.time < nextPlaceTime) return false;
+        if (target == null || target.IsDead || !bomber.CanPlaceBalloon) return false;
+        if (Time.time < nextPlaceTime || board.HasBalloon(currentCell)) return false;
+
+        // 여기 풍선을 놓았다고 가정한 위험 지도 (연쇄 포함)
+        BubbleBoard.DangerMap hypo = board.GetDangerMap(currentCell);
         Vector2Int p = target.Cell;
-        int dist = Manhattan(p, currentCell);
-        bool inLine = (p.x == currentCell.x || p.y == currentCell.y) && dist <= board.BalloonRange;
-        return inLine || dist <= attackDistance;
-    }
+        if (!hypo.IsDangerous(p)) return false;   // 플레이어에게 닿지 않으면 놓지 않음
 
-    bool TryAttack(HashSet<Vector2Int> danger)
-    {
-        if (board.HasBalloon(currentCell)) return false;
+        // 자기가 제때 빠져나갈 수 있어야 함 (놓은 풍선 칸은 이미 서 있으니 출발은 가능)
+        List<Vector2Int> escape = FindTimedPath(currentCell, c => !hypo.IsDangerous(c), hypo, null);
+        if (escape == null || escape.Count == 0) return false;
 
-        // 여기 풍선을 놓았다고 가정한 위험 지역
-        var afterPlace = new HashSet<Vector2Int>(danger);
-        foreach (Vector2Int c in board.BlastCells(currentCell, board.BalloonRange)) afterPlace.Add(c);
-
-        List<Vector2Int> escape = FindPath(currentCell, c => !afterPlace.Contains(c), allowStartBalloon: true);
-        if (escape == null) return false;
-
-        float timeNeeded = escape.Count / Mathf.Max(0.1f, moveSpeed);
-        if (timeNeeded > board.BalloonFuse - escapeMargin) return false;
+        bool trap = CountPlayerSafeCells(p, hypo, currentCell, 12) == 0;
+        if (!trap && Random.value < randomness) return false;   // 가끔 망설임
 
         if (!bomber.TryPlaceBalloon()) return false;
         nextPlaceTime = Time.time + placeCooldown;
-        SetPath(escape);
+        targetCell = escape[0];
+        LastAction = trap ? "trap" : "attack";
         return true;
     }
 
-    Vector2Int? ChooseWanderStep(HashSet<Vector2Int> danger)
+    // 플레이어와 같은 줄이고, 사거리 안이고, 사이에 물줄기를 막는 풍선이 없는 칸
+    bool IsAttackSpot(Vector2Int c, Vector2Int p)
     {
-        var options = new List<Vector2Int>();
-        foreach (Vector2Int d in BubbleBoard.Directions)
-        {
-            Vector2Int c = currentCell + d;
-            if (IsWalkable(c) && !danger.Contains(c)) options.Add(c);
-        }
-        if (options.Count == 0) return null;
-
-        if (target != null && !target.IsDead && Random.value > wanderChance)
-        {
-            Vector2Int p = target.Cell;
-            Vector2Int best = options[0];
-            int bestDist = int.MaxValue;
-            foreach (Vector2Int c in options)
-            {
-                int d = Manhattan(c, p);
-                // 플레이어와 같은 칸으로는 굳이 들어가지 않습니다.
-                if (d == 0) continue;
-                if (d < bestDist || (d == bestDist && Random.value < 0.5f)) { best = c; bestDist = d; }
-            }
-            if (bestDist == int.MaxValue) return null;
-            // 이미 바로 옆이면 가만히 있으면서 풍선 타이밍을 봅니다.
-            if (Manhattan(currentCell, p) <= 1) return null;
-            return best;
-        }
-        return options[Random.Range(0, options.Count)];
+        if (c == p || !board.InBounds(c)) return false;
+        int range = board.BalloonRange;
+        if (c.x == p.x && Mathf.Abs(c.y - p.y) <= range) return LineClear(c, p);
+        if (c.y == p.y && Mathf.Abs(c.x - p.x) <= range) return LineClear(c, p);
+        return false;
     }
 
-    void StepOrIdle()
+    bool LineClear(Vector2Int a, Vector2Int b)
     {
-        if (path.Count > 0) targetCell = path.Dequeue();
-        else idleUntil = Time.time + 0.1f;
+        Vector2Int step = new Vector2Int(System.Math.Sign(b.x - a.x), System.Math.Sign(b.y - a.y));
+        for (Vector2Int c = a + step; c != b; c += step)
+            if (board.HasBalloon(c)) return false;
+        return true;
     }
 
-    void SetPath(List<Vector2Int> cells)
+    // 플레이어가 물이 닿기 전에 도착할 수 있는 안전한 칸 수 (0이면 갇힘)
+    int CountPlayerSafeCells(Vector2Int start, BubbleBoard.DangerMap map, Vector2Int extraBlocked, int maxSteps)
     {
-        path.Clear();
-        if (cells == null) return;
-        foreach (Vector2Int c in cells) path.Enqueue(c);
-    }
-
-    bool IsWalkable(Vector2Int c) => board.InBounds(c) && !board.HasBalloon(c) && !board.IsStream(c);
-
-    // BFS로 goal 조건을 만족하는 가장 가까운 칸까지의 경로 (시작 칸 제외). 없으면 null.
-    List<Vector2Int> FindPath(Vector2Int start, System.Func<Vector2Int, bool> isGoal, bool allowStartBalloon = true)
-    {
-        var prev = new Dictionary<Vector2Int, Vector2Int>();
+        float step = 1f / Mathf.Max(0.1f, playerCellsPerSecond);
+        var dist = new Dictionary<Vector2Int, int> { { start, 0 } };
         var queue = new Queue<Vector2Int>();
         queue.Enqueue(start);
-        prev[start] = start;
+        int safe = map.IsDangerous(start) ? 0 : 1;
 
         while (queue.Count > 0)
         {
             Vector2Int c = queue.Dequeue();
-            if (c != start && isGoal(c))
+            int k = dist[c];
+            if (k >= maxSteps) continue;
+            foreach (Vector2Int d in BubbleBoard.Directions)
             {
-                var result = new List<Vector2Int>();
-                for (Vector2Int k = c; k != start; k = prev[k]) result.Add(k);
-                result.Reverse();
-                return result;
+                Vector2Int n = c + d;
+                if (dist.ContainsKey(n) || n == extraBlocked || !IsWalkable(n)) continue;
+                float arrive = (k + 1) * step;
+                if (map.Overlaps(n, arrive - 0.5f * step, arrive + 0.5f * step, 0f)) continue;
+                dist[n] = k + 1;
+                queue.Enqueue(n);
+                if (!map.IsDangerous(n)) safe++;
             }
+        }
+        return safe;
+    }
+
+    // 시간까지 고려한 BFS: 각 칸을 지나는 동안 물이 오지 않는 경로만 고릅니다.
+    List<Vector2Int> FindTimedPath(Vector2Int start, System.Func<Vector2Int, bool> isGoal,
+                                   BubbleBoard.DangerMap map, Vector2Int? extraBlocked)
+    {
+        float step = StepTime;
+        var prev = new Dictionary<Vector2Int, Vector2Int> { { start, start } };
+        var dist = new Dictionary<Vector2Int, int> { { start, 0 } };
+        var queue = new Queue<Vector2Int>();
+        queue.Enqueue(start);
+
+        while (queue.Count > 0)
+        {
+            Vector2Int c = queue.Dequeue();
+            if (c != start && isGoal(c)) return Reconstruct(prev, start, c);
+
+            int k = dist[c];
+            foreach (Vector2Int d in BubbleBoard.Directions)
+            {
+                Vector2Int n = c + d;
+                if (dist.ContainsKey(n) || !IsWalkable(n)) continue;
+                if (extraBlocked.HasValue && n == extraBlocked.Value) continue;
+                float arrive = (k + 1) * step;
+                if (map.Overlaps(n, arrive - 0.5f * step, arrive + 0.5f * step, safetyMargin)) continue;
+                dist[n] = k + 1;
+                prev[n] = c;
+                queue.Enqueue(n);
+            }
+        }
+        return null;
+    }
+
+    // 시간을 고려하지 않는 BFS (시간 계산으로 길이 없을 때의 마지막 수단)
+    List<Vector2Int> FindPath(Vector2Int start, System.Func<Vector2Int, bool> isGoal)
+    {
+        var prev = new Dictionary<Vector2Int, Vector2Int> { { start, start } };
+        var queue = new Queue<Vector2Int>();
+        queue.Enqueue(start);
+        while (queue.Count > 0)
+        {
+            Vector2Int c = queue.Dequeue();
+            if (c != start && isGoal(c)) return Reconstruct(prev, start, c);
             foreach (Vector2Int d in BubbleBoard.Directions)
             {
                 Vector2Int n = c + d;
@@ -198,12 +241,25 @@ public class BubbleBot : MonoBehaviour
         return null;
     }
 
-    static Vector2Int LastOf(Queue<Vector2Int> q)
+    static List<Vector2Int> Reconstruct(Dictionary<Vector2Int, Vector2Int> prev, Vector2Int start, Vector2Int end)
     {
-        Vector2Int last = default;
-        foreach (Vector2Int c in q) last = c;
-        return last;
+        var result = new List<Vector2Int>();
+        for (Vector2Int k = end; k != start; k = prev[k]) result.Add(k);
+        result.Reverse();
+        return result;
     }
 
-    static int Manhattan(Vector2Int a, Vector2Int b) => Mathf.Abs(a.x - b.x) + Mathf.Abs(a.y - b.y);
+    Vector2Int? SafeRandomStep(BubbleBoard.DangerMap danger)
+    {
+        var options = new List<Vector2Int>();
+        foreach (Vector2Int d in BubbleBoard.Directions)
+        {
+            Vector2Int c = currentCell + d;
+            if (IsWalkable(c) && !danger.IsDangerous(c)) options.Add(c);
+        }
+        if (options.Count == 0) return null;
+        return options[Random.Range(0, options.Count)];
+    }
+
+    bool IsWalkable(Vector2Int c) => board.InBounds(c) && !board.HasBalloon(c) && !board.IsStream(c);
 }

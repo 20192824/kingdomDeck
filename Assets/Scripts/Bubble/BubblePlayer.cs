@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 #endif
 
-// 버블 게임 플레이어: WASD로 이동하고 스페이스바로 지금 서 있는 칸에 물풍선을 놓습니다.
+// 버블 게임 플레이어: 방향키(화살표)로 이동하고 스페이스바로 지금 서 있는 칸에 물풍선을 놓습니다.
 [RequireComponent(typeof(CharacterController))]
 [RequireComponent(typeof(Bomber))]
 public class BubblePlayer : MonoBehaviour
@@ -63,13 +63,15 @@ public class BubblePlayer : MonoBehaviour
 #if ENABLE_INPUT_SYSTEM
         Keyboard kb = Keyboard.current;
         if (kb == null) return v;
-        if (kb.wKey.isPressed) v.y += 1f;
-        if (kb.sKey.isPressed) v.y -= 1f;
-        if (kb.dKey.isPressed) v.x += 1f;
-        if (kb.aKey.isPressed) v.x -= 1f;
+        if (kb.upArrowKey.isPressed) v.y += 1f;
+        if (kb.downArrowKey.isPressed) v.y -= 1f;
+        if (kb.rightArrowKey.isPressed) v.x += 1f;
+        if (kb.leftArrowKey.isPressed) v.x -= 1f;
 #else
-        v.x = Input.GetAxisRaw("Horizontal");
-        v.y = Input.GetAxisRaw("Vertical");
+        if (Input.GetKey(KeyCode.UpArrow)) v.y += 1f;
+        if (Input.GetKey(KeyCode.DownArrow)) v.y -= 1f;
+        if (Input.GetKey(KeyCode.RightArrow)) v.x += 1f;
+        if (Input.GetKey(KeyCode.LeftArrow)) v.x -= 1f;
 #endif
         return v;
     }

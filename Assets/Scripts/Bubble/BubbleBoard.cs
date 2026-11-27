@@ -30,7 +30,7 @@ public class BubbleBoard : MonoBehaviour
     private float balloonFuse = 2.5f;
 
     [SerializeField, Tooltip("물줄기가 뻗어 나가는 칸 수 (십자 방향 각각)")]
-    private int balloonRange = 2;
+    private int balloonRange = 4;
 
     [SerializeField, Tooltip("물줄기가 남아 있는 시간 (초). 이 동안 들어온 캐릭터도 맞습니다.")]
     private float streamDuration = 0.5f;
@@ -43,6 +43,7 @@ public class BubbleBoard : MonoBehaviour
     public float CellSize => cellSize;
     public float BalloonFuse => balloonFuse;
     public int BalloonRange => balloonRange;
+    public float StreamDuration => streamDuration;
     public IEnumerable<WaterBalloon> Balloons => balloons.Values;
 
     void Awake()
@@ -94,6 +95,12 @@ public class BubbleBoard : MonoBehaviour
     // 다른 물풍선이 있는 칸은 포함한 뒤 그 방향은 멈춥니다(그 풍선이 연쇄로 터짐).
     public List<Vector2Int> BlastCells(Vector2Int center, int range)
     {
+        return BlastCells(center, range, HasBalloon);
+    }
+
+    // isBalloon으로 "풍선이 있다고 볼 칸"을 직접 정할 수 있는 버전 (가상의 풍선을 계산할 때 사용)
+    public List<Vector2Int> BlastCells(Vector2Int center, int range, System.Func<Vector2Int, bool> isBalloon)
+    {
         var cells = new List<Vector2Int> { center };
         foreach (Vector2Int dir in Directions)
         {
@@ -102,10 +109,95 @@ public class BubbleBoard : MonoBehaviour
                 Vector2Int c = center + dir * i;
                 if (!InBounds(c)) break;
                 cells.Add(c);
-                if (HasBalloon(c)) break;
+                if (isBalloon(c)) break;
             }
         }
         return cells;
+    }
+
+    // 칸마다 "지금부터 몇 초 뒤에 물이 닿고 언제 사라지는지"를 담은 위험 지도.
+    public class DangerMap
+    {
+        public readonly Dictionary<Vector2Int, float> Start = new Dictionary<Vector2Int, float>();
+        public readonly Dictionary<Vector2Int, float> End = new Dictionary<Vector2Int, float>();
+
+        // 앞으로 물이 한 번이라도 닿는 칸인지
+        public bool IsDangerous(Vector2Int c) => Start.ContainsKey(c);
+
+        // [from, to] 동안 이 칸에 있으면 물에 맞는지 (margin초 여유를 둠)
+        public bool Overlaps(Vector2Int c, float from, float to, float margin)
+        {
+            if (!Start.TryGetValue(c, out float s)) return false;
+            float e = End[c];
+            return from < e + margin && to > s - margin;
+        }
+
+        internal void Add(Vector2Int c, float start, float end)
+        {
+            if (Start.TryGetValue(c, out float s))
+            {
+                Start[c] = Mathf.Min(s, start);
+                End[c] = Mathf.Max(End[c], end);
+            }
+            else
+            {
+                Start[c] = start;
+                End[c] = end;
+            }
+        }
+    }
+
+    // 지금 놓인 풍선들(+ 원하면 extraBalloon 칸에 가상의 풍선 하나)이 터질 시간을
+    // 연쇄 폭발까지 계산해서 위험 지도를 만듭니다. 이미 남아 있는 물줄기도 포함.
+    public DangerMap GetDangerMap(Vector2Int? extraBalloon = null)
+    {
+        var cells = new List<Vector2Int>();
+        var range = new Dictionary<Vector2Int, int>();
+        var explodeIn = new Dictionary<Vector2Int, float>();
+
+        foreach (var kv in balloons)
+        {
+            cells.Add(kv.Key);
+            range[kv.Key] = kv.Value.Range;
+            explodeIn[kv.Key] = kv.Value.TimeLeft;
+        }
+        if (extraBalloon.HasValue && InBounds(extraBalloon.Value) && !balloons.ContainsKey(extraBalloon.Value))
+        {
+            Vector2Int e = extraBalloon.Value;
+            cells.Add(e);
+            range[e] = balloonRange;
+            explodeIn[e] = balloonFuse;
+        }
+
+        System.Func<Vector2Int, bool> isBalloon = c => explodeIn.ContainsKey(c);
+
+        // 연쇄: 다른 풍선의 물줄기가 닿으면 그 풍선도 같이 (더 일찍) 터집니다.
+        bool changed = true;
+        for (int guard = 0; changed && guard < 64; guard++)
+        {
+            changed = false;
+            foreach (Vector2Int b in cells)
+                foreach (Vector2Int c in BlastCells(b, range[b], isBalloon))
+                    if (c != b && explodeIn.TryGetValue(c, out float tc) && explodeIn[b] < tc)
+                    {
+                        explodeIn[c] = explodeIn[b];
+                        changed = true;
+                    }
+        }
+
+        var map = new DangerMap();
+        foreach (Vector2Int b in cells)
+        {
+            float t = explodeIn[b];
+            foreach (Vector2Int c in BlastCells(b, range[b], isBalloon))
+                map.Add(c, t, t + streamDuration);
+        }
+
+        float now = Time.time;
+        foreach (var kv in streamUntil)
+            if (kv.Value > now) map.Add(kv.Key, 0f, kv.Value - now);
+
+        return map;
     }
 
     internal void SpawnStreams(List<Vector2Int> cells)
