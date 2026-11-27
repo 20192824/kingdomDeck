@@ -183,7 +183,7 @@ namespace KingdomDeck.Presentation.EditorTools
             if (existing != null) return existing;
             var font = AssetDatabase.LoadAssetAtPath<Font>(src);
             if (font == null) { Debug.LogError("폰트 파일이 없습니다: " + src); return null; }
-            var fa = TMPro.TMP_FontAsset.CreateFontAsset(font, 72, 8, UnityEngine.TextCore.LowLevel.GlyphRenderMode.SDFAA, 2048, 2048,
+            var fa = TMPro.TMP_FontAsset.CreateFontAsset(font, 72, 14, UnityEngine.TextCore.LowLevel.GlyphRenderMode.SDFAA, 2048, 2048,
                 TMPro.AtlasPopulationMode.Dynamic, true);
             fa.name = Path.GetFileNameWithoutExtension(dst);
             AssetDatabase.CreateAsset(fa, dst);

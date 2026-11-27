@@ -70,7 +70,7 @@ MonoBehaviour:
   m_ClearDynamicDataOnBuild: 1
   m_AtlasWidth: 2048
   m_AtlasHeight: 2048
-  m_AtlasPadding: 8
+  m_AtlasPadding: 14
   m_AtlasRenderMode: 4165
   m_UsedGlyphRects: []
   m_FreeGlyphRects:
@@ -219,15 +219,15 @@ Material:
     - _ColorMask: 15
     - _CullMode: 0
     - _FaceDilate: 0
-    - _GradientScale: 9
+    - _GradientScale: 15
     - _MaskSoftnessX: 0
     - _MaskSoftnessY: 0
     - _OutlineSoftness: 0
     - _OutlineWidth: 0
     - _PerspectiveFilter: 0.875
-    - _ScaleRatioA: 0.8888889
+    - _ScaleRatioA: 0.93333334
     - _ScaleRatioB: 1
-    - _ScaleRatioC: 0.7222222
+    - _ScaleRatioC: 0.7583333
     - _ScaleX: 1
     - _ScaleY: 1
     - _ShaderFlags: 0

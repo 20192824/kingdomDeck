@@ -100,15 +100,17 @@ namespace KingdomDeck.AI
             Func<string, bool> ok = id => g.InSupply(id) && g.SupplyCount(id) > 0 && (isPurchase ? g.EffectiveCost(id) : g.Card(id).Cost) <= coins;
             switch (Level)
             {
-                case Difficulty.Easy: return BuyEasy(ok);
+                case Difficulty.Easy: return BuyEasy(ok, g.SupplyCount("dragon") <= 0);
                 case Difficulty.Normal: return BuyNormal(g, me, ok);
                 default: return BuyHard(g, me, coins, ok);
             }
         }
 
-        static string BuyEasy(Func<string, bool> ok)
+        /// <summary>쉬움: 8코인 드래곤, 6 금화, 3 은화. 드래곤이 다 떨어지면 5코인 이상에서 투석기로 대신 공격.</summary>
+        static string BuyEasy(Func<string, bool> ok, bool dragonsGone)
         {
             if (ok("dragon")) return "dragon";
+            if (dragonsGone && ok("catapult")) return "catapult";
             if (ok("gold")) return "gold";
             if (ok("silver")) return "silver";
             return null;
@@ -119,7 +121,7 @@ namespace KingdomDeck.AI
         string BuyNormal(Game g, int me, Func<string, bool> ok)
         {
             var p = g.Players[me];
-            int dragons = g.SupplyCount("dragon");
+            int dragons = Clock(g);
             if (ok("dragon")) return "dragon";
             if (dragons <= 4 && ok("catapult") && !ok("gold")) return "catapult";
             if (ok("gold")) return dragons <= 3 && ok("catapult") ? "catapult" : "gold";
@@ -138,7 +140,7 @@ namespace KingdomDeck.AI
             var p = g.Players[me];
             int opp = Game.Opponent(me);
             int myHp = g.CastleHp(me), oppHp = g.CastleHp(opp);
-            int dragons = g.SupplyCount("dragon");
+            int dragons = Clock(g);
 
             // 1) 성 함락으로 바로 이길 수 있으면 그 병기를 산다
             if (g.Options.InstantCastleEnd)
@@ -159,8 +161,7 @@ namespace KingdomDeck.AI
             // 3) 드래곤 소진 직전: 마지막 드래곤은 이길 때만
             if (ok("dragon"))
             {
-                if (dragons == 1 && myHp <= oppHp - 6) { /* 사면 지면서 끝남 → 다른 걸 산다 */ }
-                else if (p.Count("gold") > 0 || dragons <= 6 || TreasureValue(g, p) >= 16) return "dragon";
+                if (p.Count("gold") > 0 || dragons <= 6 || TreasureValue(g, p) >= 16) return "dragon";
             }
 
             int witches = p.Count("witch");
@@ -221,6 +222,17 @@ namespace KingdomDeck.AI
                 power += after / def.PowerPerCards + owned * (after / def.PowerPerCards - (after - 1) / def.PowerPerCards);
             }
             return power;
+        }
+
+        /// <summary>
+        /// 게임이 얼마나 남았는지 (클수록 초반). 원래는 남은 드래곤 수였지만, 드래곤 소진으로는
+        /// 게임이 끝나지 않으므로 두 성 중 낮은 체력도 함께 본다: 30 → 8, 18 → 4, 12 → 2, 6 이하 → 0.
+        /// </summary>
+        static int Clock(Game g)
+        {
+            int minHp = Math.Min(g.CastleHp(0), g.CastleHp(1));
+            int byHp = Math.Max(0, (minHp - 6) / 3);
+            return Math.Min(g.SupplyCount("dragon"), byHp);
         }
 
         static bool OpponentHasAttack(Game g, int opp) => g.Players[opp].AllCards.Any(id => g.Card(id).Is(CardType.Attack));
@@ -335,7 +347,7 @@ namespace KingdomDeck.AI
         (int index, int score) RemodelScore(Game g, int me, List<string> hand, int skipIndex)
         {
             int dragons = g.SupplyCount("dragon");
-            bool late = dragons <= 4;
+            bool late = Clock(g) <= 4;
             bool early = g.Players[me].TurnsTaken < 8;
             int best = -1, bestScore = 0;
             for (int i = 0; i < hand.Count; i++)

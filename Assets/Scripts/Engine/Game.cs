@@ -11,8 +11,8 @@ namespace KingdomDeck.Engine
     /// </summary>
     public sealed partial class Game
     {
-        /// <summary>성 체력 기준값. 시작 덱의 궁수대 3장(공격력 3) 때문에 실제 시작 체력은 BaseHp - 3 = 40.</summary>
-        public const int BaseHp = 43;
+        /// <summary>성 체력 기준값. 시작 덱의 궁수대 3장(공격력 3) 때문에 실제 시작 체력은 BaseHp - 3 = 30.</summary>
+        public const int BaseHp = 33;
         /// <summary>게임 시작 시 성 체력</summary>
         public const int StartingHp = BaseHp - 3;
         public const int KingdomSize = 10;
@@ -106,7 +106,7 @@ namespace KingdomDeck.Engine
             return sum;
         }
 
-        /// <summary>내 성 체력 = 43 − (상대 덱의 병기 공격력 합) − (내 덱의 배신자 수)</summary>
+        /// <summary>내 성 체력 = 33 − (상대 덱의 병기 공격력 합) − (내 덱의 배신자 수)</summary>
         public int CastleHp(int p) => BaseHp - SiegePower(Opponent(p)) - TraitorDamage(p);
 
         public int EffectiveCost(string id) => Math.Max(0, Db[id].Cost - CostDiscount);
@@ -387,7 +387,7 @@ namespace KingdomDeck.Engine
             Draw(Current, HandSize);
             p.TurnsTaken++;
 
-            if (SupplyCount("dragon") <= 0 && InSupply("dragon")) { EndGame(EndReason.DragonsGone); return; }
+            // (2026-11-27 규칙 변경) 드래곤 더미가 비어도 게임은 끝나지 않는다. 드래곤 더미도 "빈 더미 3개"에는 센다.
             if (EmptyPiles >= 3) { EndGame(EndReason.ThreePiles); return; }
             if (TurnNumber >= Options.TurnLimit) { EndGame(EndReason.TurnLimit); return; }
 

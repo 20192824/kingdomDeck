@@ -24,7 +24,7 @@ namespace KingdomDeck.Presentation
             var root = UiKit.Panel("HpBar", parent, Palette.PanelDark);
             bar.Root = root.rectTransform;
 
-            var label = UiKit.Text("Title", root.transform, title, 26, Palette.Text, alignRight ? TextAnchor.MiddleRight : TextAnchor.MiddleLeft, FontStyle.Bold);
+            var label = UiKit.Text("Title", root.transform, title, 26, Palette.Text, alignRight ? TextAnchor.MiddleRight : TextAnchor.MiddleLeft, FontStyle.Bold).Fit();
             label.rectTransform.Place(new Vector2(0, 0.5f), new Vector2(1, 1), new Vector2(14, 0), new Vector2(-14, -4));
             label.Shadowed();
 
@@ -37,7 +37,7 @@ namespace KingdomDeck.Presentation
             var shine = UiKit.Image("Shine", bar.fill.transform, new Color(1, 1, 1, 0.18f), UiKit.RoundedSmall);
             shine.rectTransform.Place(new Vector2(0, 0.55f), Vector2.one, new Vector2(2, 0), new Vector2(-2, -1));
 
-            bar.value = UiKit.Text("Value", root.transform, KingdomDeck.Engine.Game.StartingHp.ToString(), 42, Palette.Text, TextAnchor.MiddleCenter, FontStyle.Bold);
+            bar.value = UiKit.Text("Value", root.transform, KingdomDeck.Engine.Game.StartingHp.ToString(), 42, Palette.Text, TextAnchor.MiddleCenter, FontStyle.Bold).Fit();
             bar.value.rectTransform.Place(new Vector2(1, 0), new Vector2(1, 0.62f), new Vector2(-74, 2), new Vector2(-6, 0));
             bar.value.Shadowed(2f);
             bar.shown = bar.ghostV = bar.target = KingdomDeck.Engine.Game.StartingHp;
@@ -66,7 +66,7 @@ namespace KingdomDeck.Presentation
             SetWidth(fill.rectTransform, Mathf.Clamp01(shown / Max));
             SetWidth(ghost.rectTransform, Mathf.Clamp01(ghostV / Max));
             value.text = Mathf.RoundToInt(shown).ToString();
-            value.color = Color.Lerp(shown <= 15 ? Palette.Bad : Palette.Text, Color.white, flash);
+            value.color = Color.Lerp(shown <= Max / 3f ? Palette.Bad : Palette.Text, Color.white, flash);
             back.color = Color.Lerp(Palette.Hex("#120e0a"), Palette.Hex("#6a1010"), flash * 0.8f);
         }
 
@@ -121,18 +121,19 @@ namespace KingdomDeck.Presentation
             coin.rectTransform.At(new Vector2(0, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(98 + 16, 0), new Vector2(30, 30));
             coin.Outlined(Palette.Hex("#6a4a08"), 1.5f);
             coin.raycastTarget = false;
-            var cost = UiKit.Text("Value", coin.transform, def.Cost.ToString(), 17, Palette.Hex("#3a2404"), TextAnchor.MiddleCenter, FontStyle.Bold);
+            var cost = UiKit.Text("Value", coin.transform, def.Cost.ToString(), 17, Palette.Hex("#3a2404"), TextAnchor.MiddleCenter, FontStyle.Bold).Fit();
             cost.rectTransform.Fill();
 
-            tile.nameText = UiKit.Text("Name", bg.transform, def.Name, 18, Palette.Text, TextAnchor.UpperLeft, FontStyle.Bold);
-            tile.nameText.rectTransform.Place(new Vector2(0, 0), new Vector2(1, 1), new Vector2(136, 4), new Vector2(-56, -6));
+            // 이름은 윗줄, 종류는 아랫줄 (겹치지 않게 칸을 나눔)
+            tile.nameText = UiKit.Text("Name", bg.transform, def.Name, 18, Palette.Text, TextAnchor.MiddleLeft, FontStyle.Bold).Fit();
+            tile.nameText.rectTransform.Place(new Vector2(0, 0.46f), new Vector2(1, 1), new Vector2(136, 0), new Vector2(-56, -3));
             tile.nameText.Shadowed(1.2f);
             string sub = def.TypeName + (def.PowerPerCards > 0 ? "  덱 " + def.PowerPerCards + "장당 1"
                 : def.Power > 0 ? "  공격력 " + def.Power : def.Coins > 0 ? "  +" + def.Coins + "코인" : "");
-            var type = UiKit.Text("Type", bg.transform, sub, 12, Palette.TextDim, TextAnchor.LowerLeft);
-            type.rectTransform.Place(new Vector2(0, 0), new Vector2(1, 1), new Vector2(136, 5), new Vector2(-56, -4));
+            var type = UiKit.Text("Type", bg.transform, sub, 14, Palette.TextDim, TextAnchor.MiddleLeft).Fit();
+            type.rectTransform.Place(new Vector2(0, 0), new Vector2(1, 0.46f), new Vector2(136, 3), new Vector2(-56, 0));
 
-            tile.count = UiKit.Text("Count", bg.transform, "10", 22, Palette.Gold, TextAnchor.MiddleRight, FontStyle.Bold);
+            tile.count = UiKit.Text("Count", bg.transform, "10", 22, Palette.Gold, TextAnchor.MiddleRight, FontStyle.Bold).Fit();
             tile.count.rectTransform.Place(new Vector2(1, 0), new Vector2(1, 1), new Vector2(-56, 0), new Vector2(-10, 0));
             tile.count.Shadowed(1.5f);
 

@@ -68,6 +68,7 @@ namespace KingdomDeck.Presentation
         public event Action<CardView> Clicked;
         public event Action<CardView, bool> Hovered;
 
+        bool fullText;
         RectTransform rt;
         /// <summary>보이는 카드 그림 전체. 마우스를 올리면 이것만 위로 올라가고 커진다.</summary>
         RectTransform body;
@@ -88,7 +89,8 @@ namespace KingdomDeck.Presentation
         public RectTransform Rt => rt;
         public Vector2 BasePos => basePos;
 
-        public static CardView Create(Transform parent, CardDef def, CardVisual vis, Texture art, float scale = 1f)
+        /// <param name="fullText">true면 효과 전체 문장(크게 보기용), false면 짧은 요약(손패 등)</param>
+        public static CardView Create(Transform parent, CardDef def, CardVisual vis, Texture art, float scale = 1f, bool fullText = false)
         {
             var root = UiKit.Rect("Card_" + (def != null ? def.Id : "back"), parent);
             root.sizeDelta = new Vector2(W, H);
@@ -99,6 +101,7 @@ namespace KingdomDeck.Presentation
             cv.hit.rectTransform.Fill();
             cv.hit.raycastTarget = true;
             cv.body = UiKit.Rect("Visual", root).Fill();
+            cv.fullText = fullText;
             cv.Build(def, vis, art);
             if (Application.isMobilePlatform) cv.HoverZoom = false; // 터치에는 마우스 올리기가 없다 (길게 누르기로 확대)
             cv.SetBase(Vector2.zero, scale, 0f, true);
@@ -132,8 +135,8 @@ namespace KingdomDeck.Presentation
             var band = UiKit.Image("NameBand", body, Color.Lerp(frameCol, Color.black, 0.25f), UiKit.RoundedSmall);
             band.rectTransform.Place(new Vector2(0, 1), new Vector2(1, 1), new Vector2(8, -36), new Vector2(-8, -8));
             band.raycastTarget = false;
-            nameText = UiKit.Text("Name", band.transform, def.Name, def.Name.Length > 4 ? 15 : 18, Palette.Hex("#fff6e0"), TextAnchor.MiddleCenter, FontStyle.Bold);
-            nameText.rectTransform.Place(Vector2.zero, Vector2.one, new Vector2(26, 0), new Vector2(-4, 0));
+            nameText = UiKit.Text("Name", band.transform, def.Name, 18, Palette.Hex("#fff6e0"), TextAnchor.MiddleCenter, FontStyle.Bold).Fit(0.55f);
+            nameText.rectTransform.Place(Vector2.zero, Vector2.one, new Vector2(34, 0), new Vector2(-4, 0));
             nameText.Shadowed(1.2f);
 
             // 그림
@@ -154,11 +157,17 @@ namespace KingdomDeck.Presentation
             typeText.rectTransform.Place(new Vector2(0, 1), new Vector2(1, 1), new Vector2(8, -140), new Vector2(-8, -122));
 
             // 효과 글
-            string desc = def.Text;
+            string desc = !fullText && !string.IsNullOrEmpty(def.Short) ? def.Short : def.Text;
             if (def.Is(CardType.Treasure)) desc = "";
-            if (def.Is(CardType.Siege)) desc = def.PowerPerCards > 0 ? "덱이 커질수록\n강해지는 부대" : "구매하는 순간\n상대 성을 공격!";
-            if (def.Is(CardType.Traitor)) desc = "덱에 있는 동안\n성벽을 무너뜨린다";
-            var bodyText = UiKit.Text("Body", this.body, desc, desc.Length > 30 ? 11 : 13, Palette.Hex("#3a2a1a"), TextAnchor.MiddleCenter);
+            if (def.Is(CardType.Siege))
+                desc = fullText ? (def.PowerPerCards > 0 ? "덱이 커질수록 강해지는 부대\n(내 덱 " + def.PowerPerCards + "장당 공격력 1)" : "구매하는 순간\n상대 성을 공격!")
+                                : (def.PowerPerCards > 0 ? "덱이 클수록\n강해짐" : "사는 순간\n성 공격!");
+            if (def.Is(CardType.Traitor)) desc = fullText ? "덱에 있는 동안\n성벽을 무너뜨린다" : "덱에 있으면\n내 성 피해";
+            bool isShort = desc != def.Text;
+            // 요약은 굵고 크게, 전체 문장은 칸에 맞춰 자동으로 줄인다
+            var bodyText = UiKit.Text("Body", this.body, desc, isShort ? 17 : 13, Palette.Hex("#3a2a1a"), TextAnchor.MiddleCenter,
+                isShort ? FontStyle.Bold : FontStyle.Normal).Fit(0.5f);
+            bodyText.lineSpacing = -8f;
             float bottom = def.Is(CardType.Siege) || def.Is(CardType.Traitor) ? 40 : 8;
             bodyText.rectTransform.Place(new Vector2(0, 0), new Vector2(1, 1), new Vector2(10, bottom), new Vector2(-10, -140));
 
@@ -175,21 +184,21 @@ namespace KingdomDeck.Presentation
                 var badge = UiKit.Image("Power", body, Palette.Hex("#8c1c1c"), UiKit.RoundedSmall);
                 badge.rectTransform.At(new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, 10), new Vector2(96, 28));
                 string label = def.PowerPerCards > 0 ? def.PowerPerCards + "장당 공격력 1" : "공격력 " + def.Power;
-                if (def.PowerPerCards > 0) badge.rectTransform.sizeDelta = new Vector2(128, 28);
-                var v = UiKit.Text("Value", badge.transform, label, def.PowerPerCards > 0 ? 14 : 16, Color.white, TextAnchor.MiddleCenter, FontStyle.Bold);
+                if (def.PowerPerCards > 0) badge.rectTransform.sizeDelta = new Vector2(146, 28);
+                var v = UiKit.Text("Value", badge.transform, label, 16, Color.white, TextAnchor.MiddleCenter, FontStyle.Bold).Fit(0.6f);
                 v.rectTransform.Fill();
             }
             if (def.Is(CardType.Traitor))
             {
                 var badge = UiKit.Image("Self", body, Palette.Hex("#3a1a4a"), UiKit.RoundedSmall);
                 badge.rectTransform.At(new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, 10), new Vector2(96, 28));
-                var v = UiKit.Text("Value", badge.transform, "내 성 -" + def.SelfDamage, 16, Color.white, TextAnchor.MiddleCenter, FontStyle.Bold);
+                var v = UiKit.Text("Value", badge.transform, "내 성 -" + def.SelfDamage, 16, Color.white, TextAnchor.MiddleCenter, FontStyle.Bold).Fit(0.6f);
                 v.rectTransform.Fill();
             }
 
             // 비용 동전
             var coin = UiKit.Image("Cost", body, Palette.Hex("#f2c744"), UiKit.Circle);
-            coin.rectTransform.At(new Vector2(0, 1), new Vector2(0.5f, 0.5f), new Vector2(18, -20), new Vector2(36, 36));
+            coin.rectTransform.At(new Vector2(0, 1), new Vector2(0.5f, 0.5f), new Vector2(19, -21), new Vector2(40, 40));
             coin.Outlined(Palette.Hex("#6a4a08"), 2f);
             coin.raycastTarget = false;
             var cost = UiKit.Text("Value", coin.transform, def.Cost.ToString(), 20, Palette.Hex("#3a2404"), TextAnchor.MiddleCenter, FontStyle.Bold);

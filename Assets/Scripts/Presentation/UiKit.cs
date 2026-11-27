@@ -108,9 +108,9 @@ namespace KingdomDeck.Presentation
             {
                 m.EnableKeyword(ShaderUtilities.Keyword_Underlay);
                 m.SetColor(ShaderUtilities.ID_UnderlayColor, new Color(0, 0, 0, 0.75f));
-                m.SetFloat(ShaderUtilities.ID_UnderlayOffsetX, 0.6f);
-                m.SetFloat(ShaderUtilities.ID_UnderlayOffsetY, -0.6f);
-                m.SetFloat(ShaderUtilities.ID_UnderlaySoftness, 0.25f);
+                m.SetFloat(ShaderUtilities.ID_UnderlayOffsetX, 0.45f);
+                m.SetFloat(ShaderUtilities.ID_UnderlayOffsetY, -0.45f);
+                m.SetFloat(ShaderUtilities.ID_UnderlaySoftness, 0.15f);
             }
             textMats[key] = m;
             return m;
@@ -233,6 +233,18 @@ namespace KingdomDeck.Presentation
             return img;
         }
 
+        /// <summary>모든 화면 글자 크기 배율 (모바일에서 읽기 쉽게 크게)</summary>
+        public static float TextScale = 1.25f;
+
+        /// <summary>칸이 좁으면 글자를 자동으로 줄인다 (최대 = 지금 크기, 최소 = 지금 크기 × minRatio)</summary>
+        public static T Fit<T>(this T t, float minRatio = 0.6f) where T : TMP_Text
+        {
+            t.enableAutoSizing = true;
+            t.fontSizeMax = t.fontSize;
+            t.fontSizeMin = Mathf.Max(8f, t.fontSize * minRatio);
+            return t;
+        }
+
         public static TMP_Text Text(string name, Transform parent, string text, int size, Color color, TextAnchor align = TextAnchor.MiddleCenter, FontStyle style = FontStyle.Normal)
         {
             var rt = Rect(name, parent);
@@ -240,7 +252,7 @@ namespace KingdomDeck.Presentation
             bool bold = style == FontStyle.Bold || style == FontStyle.BoldAndItalic;
             t.font = bold ? Bold : Regular;
             t.text = text;
-            t.fontSize = size;
+            t.fontSize = size * TextScale;
             t.color = color;
             t.alignment = Align(align);
             t.richText = true;
@@ -322,6 +334,7 @@ namespace KingdomDeck.Presentation
             var txt = Text("Label", img.transform, label, fontSize, Palette.Text, TextAnchor.MiddleCenter, FontStyle.Bold);
             txt.rectTransform.Fill(4);
             txt.Shadowed(1.5f);
+            txt.Fit(0.55f);
             if (onClick != null) btn.onClick.AddListener(() => { Sfx.Play(Sfx.Click, 0.5f); onClick(); });
             return new UiButton { Button = btn, Bg = img, Label = txt };
         }

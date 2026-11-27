@@ -17,7 +17,7 @@ namespace KingdomDeck.Presentation
     {
         // 기준 해상도(폭 1080) 단위
         const float TopH = 110f, AiH = 150f, StatusH = 196f, ButtonsH = 130f, HandH = 400f;
-        const float HandScale = 1.5f;
+        const float HandScale = 1.4f;
 
         Canvas canvas;
         RectTransform canvasRt, safeRt, fieldRect, fxLayer, handArea, playArea, myInfo, aiHandRow, coinsChip;
@@ -117,7 +117,7 @@ namespace KingdomDeck.Presentation
             var menu = UiKit.Button("Menu", bar.transform, "메뉴", 28, () => ShowMenu(true));
             menu.Rt.At(new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(14, 0), new Vector2(116, 80));
 
-            turnText = UiKit.Text("Turn", bar.transform, "", 28, Palette.Text, TextAnchor.MiddleLeft, FontStyle.Bold);
+            turnText = UiKit.Text("Turn", bar.transform, "", 28, Palette.Text, TextAnchor.MiddleLeft, FontStyle.Bold).Fit();
             turnText.rectTransform.At(new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(146, 0), new Vector2(250, 96));
             turnText.lineSpacing = -10f;
 
@@ -127,7 +127,7 @@ namespace KingdomDeck.Presentation
                 var pill = UiKit.Image("Phase" + i, bar.transform, Palette.Button, UiKit.RoundedSmall);
                 pill.rectTransform.At(new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(400 + i * 106, 0), new Vector2(98, 62));
                 phasePills[i] = pill;
-                phasePillTexts[i] = UiKit.Text("T", pill.transform, names[i], 26, Palette.TextDim, TextAnchor.MiddleCenter, FontStyle.Bold);
+                phasePillTexts[i] = UiKit.Text("T", pill.transform, names[i], 26, Palette.TextDim, TextAnchor.MiddleCenter, FontStyle.Bold).Fit();
                 phasePillTexts[i].rectTransform.Fill();
             }
 
@@ -150,7 +150,7 @@ namespace KingdomDeck.Presentation
             var aiPanel = UiKit.Panel("AiInfo", strip, Palette.PanelDark);
             aiPanel.rectTransform.Place(new Vector2(0, 0), new Vector2(1, 1), new Vector2(570, 10), new Vector2(-10, -10));
             aiHandRow = UiKit.Rect("AiHand", aiPanel.transform).Place(new Vector2(0, 0.42f), Vector2.one, new Vector2(10, 0), new Vector2(-10, -6));
-            aiInfoText = UiKit.Text("Text", aiPanel.transform, "", 21, Palette.Text, TextAnchor.MiddleCenter);
+            aiInfoText = UiKit.Text("Text", aiPanel.transform, "", 21, Palette.Text, TextAnchor.MiddleCenter).Fit();
             aiInfoText.rectTransform.Place(Vector2.zero, new Vector2(1, 0.42f), new Vector2(6, 2), new Vector2(-6, 0));
         }
 
@@ -160,14 +160,14 @@ namespace KingdomDeck.Presentation
             var pa = UiKit.Image("PlayArea", fieldRect, Palette.Hex("#120e0a", 0.5f), UiKit.Rounded);
             pa.rectTransform.Place(new Vector2(0, 0), new Vector2(1, 0), new Vector2(10, 8), new Vector2(-10, 152));
             playArea = pa.rectTransform;
-            var lbl = UiKit.Text("Label", pa.transform, "사용한 카드", 20, Palette.TextDim, TextAnchor.LowerRight);
+            var lbl = UiKit.Text("Label", pa.transform, "사용한 카드", 20, Palette.TextDim, TextAnchor.LowerRight).Fit();
             lbl.rectTransform.Place(new Vector2(0, 0), new Vector2(1, 0), new Vector2(10, 6), new Vector2(-14, 36));
 
             // 덱 위에서 꺼낸 카드 (망루로 확인 / 약탈대로 공개)
             var rv = UiKit.Panel("RevealRow", fieldRect, Palette.Hex("#120e0a", 0.9f));
             rv.rectTransform.At(new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 40), new Vector2(620, 380));
             revealRow = rv.rectTransform;
-            revealLabel = UiKit.Text("Label", rv.transform, "", 24, Palette.Gold, TextAnchor.MiddleCenter, FontStyle.Bold);
+            revealLabel = UiKit.Text("Label", rv.transform, "", 24, Palette.Gold, TextAnchor.MiddleCenter, FontStyle.Bold).Fit();
             revealLabel.rectTransform.Place(new Vector2(0, 1), new Vector2(1, 1), new Vector2(10, -50), new Vector2(-10, -8));
             revealLabel.Shadowed();
             rv.gameObject.SetActive(false);
@@ -186,7 +186,7 @@ namespace KingdomDeck.Presentation
             var info = UiKit.Panel("MyInfo", row, Palette.PanelDark);
             info.rectTransform.Place(new Vector2(0, 0.5f), new Vector2(0, 1), new Vector2(438, 4), new Vector2(588, -6));
             myInfo = info.rectTransform;
-            myInfoText = UiKit.Text("Text", info.transform, "", 19, Palette.Text, TextAnchor.MiddleCenter);
+            myInfoText = UiKit.Text("Text", info.transform, "", 19, Palette.Text, TextAnchor.MiddleCenter).Fit();
             myInfoText.rectTransform.Fill(4);
 
             actionsText = ResourceChip(row, 598, "행동", Palette.Hex("#6fb0ff"), out _);
@@ -195,7 +195,7 @@ namespace KingdomDeck.Presentation
 
             var dChip = UiKit.Image("Discount", coinsChip, Palette.Hex("#8a2a5a"), UiKit.RoundedSmall);
             dChip.rectTransform.At(new Vector2(1, 1), new Vector2(1, 0.5f), new Vector2(4, 0), new Vector2(76, 30));
-            discountText = UiKit.Text("Value", dChip.transform, "-1", 19, Color.white, TextAnchor.MiddleCenter, FontStyle.Bold);
+            discountText = UiKit.Text("Value", dChip.transform, "-1", 19, Color.white, TextAnchor.MiddleCenter, FontStyle.Bold).Fit();
             discountText.rectTransform.Fill();
             discountChip = dChip.gameObject;
             discountChip.SetActive(false);
@@ -203,7 +203,7 @@ namespace KingdomDeck.Presentation
             // 아랫줄: 안내 문구 + 확인/예/아니오
             var prompt = UiKit.Panel("Prompt", row, Palette.Hex("#241c14", 0.95f));
             prompt.rectTransform.Place(new Vector2(0, 0), new Vector2(1, 0.5f), new Vector2(8, 8), new Vector2(-8, -4));
-            promptText = UiKit.Text("Text", prompt.transform, "", 24, Palette.Text, TextAnchor.MiddleLeft, FontStyle.Bold);
+            promptText = UiKit.Text("Text", prompt.transform, "", 24, Palette.Text, TextAnchor.MiddleLeft, FontStyle.Bold).Fit();
             promptText.rectTransform.Place(Vector2.zero, Vector2.one, new Vector2(18, 0), new Vector2(-270, 0));
             promptText.Shadowed();
 
@@ -220,10 +220,10 @@ namespace KingdomDeck.Presentation
             var chip = UiKit.Image("Chip_" + label, parent, Palette.Hex("#241c14"), UiKit.RoundedSmall);
             chip.rectTransform.Place(new Vector2(0, 0.5f), new Vector2(0, 1), new Vector2(x, 4), new Vector2(x + 152, -6));
             chip.Outlined(new Color(color.r, color.g, color.b, 0.55f), 2f);
-            var l = UiKit.Text("Label", chip.transform, label, 20, color, TextAnchor.UpperCenter, FontStyle.Bold);
-            l.rectTransform.Place(Vector2.zero, Vector2.one, new Vector2(4, 0), new Vector2(-4, -4));
-            var v = UiKit.Text("Value", chip.transform, "0", 40, Palette.Text, TextAnchor.LowerCenter, FontStyle.Bold);
-            v.rectTransform.Place(Vector2.zero, Vector2.one, new Vector2(4, 2), new Vector2(-4, 0));
+            var l = UiKit.Text("Label", chip.transform, label, 20, color, TextAnchor.MiddleCenter, FontStyle.Bold).Fit();
+            l.rectTransform.Place(new Vector2(0, 0.62f), Vector2.one, new Vector2(4, 0), new Vector2(-4, -2));
+            var v = UiKit.Text("Value", chip.transform, "0", 40, Palette.Text, TextAnchor.MiddleCenter, FontStyle.Bold).Fit();
+            v.rectTransform.Place(Vector2.zero, new Vector2(1, 0.66f), new Vector2(4, 2), new Vector2(-4, 0));
             v.Shadowed();
             chipRt = chip.rectTransform;
             return v;
@@ -267,11 +267,11 @@ namespace KingdomDeck.Presentation
             var head = UiKit.Text("Head", d.transform, "공급처", 36, Palette.Gold, TextAnchor.MiddleLeft, FontStyle.Bold);
             head.rectTransform.Place(new Vector2(0, 1), new Vector2(1, 1), new Vector2(24, -80), new Vector2(-24, -10));
             head.Shadowed();
-            supplyInfoText = UiKit.Text("Info", d.transform, "", 22, Palette.Text, TextAnchor.MiddleLeft);
+            supplyInfoText = UiKit.Text("Info", d.transform, "", 22, Palette.Text, TextAnchor.MiddleLeft).Fit();
             supplyInfoText.rectTransform.Place(new Vector2(0, 1), new Vector2(1, 1), new Vector2(180, -80), new Vector2(-170, -10));
             var close = UiKit.Button("Close", d.transform, "닫기", 26, () => SetSupplyOpen(false, true));
             close.Rt.At(new Vector2(1, 1), new Vector2(1, 1), new Vector2(-16, -12), new Vector2(140, 66));
-            var hint = UiKit.Text("Hint", d.transform, "누르면 구매 · 길게 누르면 카드 확대", 19, Palette.TextDim, TextAnchor.MiddleLeft);
+            var hint = UiKit.Text("Hint", d.transform, "누르면 구매 · 길게 누르면 카드 확대", 19, Palette.TextDim, TextAnchor.MiddleLeft).Fit();
             hint.rectTransform.Place(new Vector2(0, 1), new Vector2(1, 1), new Vector2(24, -112), new Vector2(-24, -80));
 
             var view = UiKit.Image("View", d.transform, Palette.Hex("#120e0a", 0.6f), UiKit.RoundedSmall);
@@ -299,7 +299,7 @@ namespace KingdomDeck.Presentation
             tiles.Clear();
             foreach (Transform c in supplyList) Destroy(c.gameObject);
 
-            const float tileScale = 1.4f, tileW = 360f, tileH = 58f, gapY = 12f, colW = 516f;
+            const float tileScale = 1.4f, tileW = 360f, tileH = 70f, gapY = 12f, colW = 516f;
             float y = 8;
             void Header(string text)
             {
@@ -448,7 +448,7 @@ namespace KingdomDeck.Presentation
             dim.rectTransform.Fill();
             dim.raycastTarget = false;
             previewDim = dim.gameObject;
-            preview = CardView.Create(fxLayer, db[cardId], library.Get(cardId), ArtStudio.Get(cardId, library), 2.6f);
+            preview = CardView.Create(fxLayer, db[cardId], library.Get(cardId), ArtStudio.Get(cardId, library), 2.6f, true);
             preview.Detach();
             preview.Rt.anchorMin = preview.Rt.anchorMax = new Vector2(0.5f, 0.5f);
             preview.Rt.anchoredPosition = new Vector2(0, 120);
@@ -482,7 +482,7 @@ namespace KingdomDeck.Presentation
             bannerGroup = b.gameObject.AddComponent<CanvasGroup>();
             bannerGroup.alpha = 0;
             bannerGroup.blocksRaycasts = false;
-            bannerText = UiKit.Text("Text", b.transform, "", 72, Palette.Gold, TextAnchor.MiddleCenter, FontStyle.Bold);
+            bannerText = UiKit.Text("Text", b.transform, "", 72, Palette.Gold, TextAnchor.MiddleCenter, FontStyle.Bold).Fit();
             bannerText.rectTransform.Fill();
             bannerText.Outlined(new Color(0, 0, 0, 0.9f), 3f);
 
@@ -492,7 +492,7 @@ namespace KingdomDeck.Presentation
             toastGroup = t.gameObject.AddComponent<CanvasGroup>();
             toastGroup.alpha = 0;
             toastGroup.blocksRaycasts = false;
-            toastText = UiKit.Text("Text", t.transform, "", 27, Palette.Text, TextAnchor.MiddleCenter, FontStyle.Bold);
+            toastText = UiKit.Text("Text", t.transform, "", 27, Palette.Text, TextAnchor.MiddleCenter, FontStyle.Bold).Fit();
             toastText.rectTransform.Fill(8);
         }
 
@@ -503,7 +503,7 @@ namespace KingdomDeck.Presentation
             menuPanel = dim.gameObject;
 
             var p = UiKit.Panel("Box", dim.transform, Palette.Hex("#231c14", 0.98f));
-            p.rectTransform.At(new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1000, 1380));
+            p.rectTransform.At(new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1000, 1480));
             float y = -40;
             TMP_Text Line(string name, string text, int size, Color color, float h, TextAnchor a = TextAnchor.MiddleCenter, FontStyle st = FontStyle.Normal)
             {
@@ -519,8 +519,8 @@ namespace KingdomDeck.Presentation
                 "· 매 턴 <b>행동 → 구매 → 정리</b>. 손패 5장으로 시작합니다.\n" +
                 "· <color=#ff9a8a><b>병기</b></color>(궁수대·투석기·드래곤 등)를 사는 순간 상대 성을 공격합니다. 하지만 병기는 덱 안에서는 쓸모없는 카드가 됩니다. 언제부터 살지가 핵심!\n" +
                 "· <color=#c8a0ff><b>배신자</b></color>는 내 덱에 있는 동안 내 성 체력을 1 깎습니다.\n" +
-                "· 드래곤이 모두 팔리거나 공급 더미 3개가 비면 끝. 성 체력이 더 많은 쪽이 승리.",
-                25, Palette.Text, 230, TextAnchor.UpperLeft);
+                "· 상대 성의 체력을 0으로 만들면 승리! (시작 체력 30) 공급 더미 3개가 비어도 끝나며, 그때는 성 체력이 더 많은 쪽이 승리.",
+                25, Palette.Text, 330, TextAnchor.UpperLeft);
             y -= 10;
 
             Line("DiffLabel", "AI 난이도", 30, Palette.Gold, 56, TextAnchor.MiddleLeft, FontStyle.Bold);

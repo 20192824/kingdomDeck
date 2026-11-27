@@ -7,6 +7,7 @@ namespace KingdomDeck.Engine
 
     public enum Phase { Setup, Action, Buy, Cleanup, GameOver }
 
+    /// <summary>DragonsGone은 2026-11-27 규칙 변경으로 더 이상 쓰지 않음 (예전 값 호환용으로 남김)</summary>
     public enum EndReason { None, DragonsGone, ThreePiles, CastleDestroyed, TurnLimit }
 
     public enum GameEventType

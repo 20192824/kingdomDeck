@@ -106,6 +106,8 @@ namespace KingdomDeck.Engine
         public int Supply = 10;
         public bool Basic;
         public string Text = "";
+        /// <summary>작은 카드(손패)에 크게 보여 줄 짧은 요약. 비우면 Text를 쓴다. 규칙에는 영향 없음.</summary>
+        public string Short;
         public List<EffectBlock> Effects = new List<EffectBlock>();
         public ReactionDef Reaction;
 
@@ -155,6 +157,7 @@ namespace KingdomDeck.Engine
                 Supply = MiniJson.Int(d, "supply", 10),
                 Basic = MiniJson.Bool(d, "basic"),
                 Text = MiniJson.Str(d, "text", ""),
+                Short = MiniJson.Str(d, "short"),
             };
             if (string.IsNullOrEmpty(c.Id)) throw new FormatException("카드에 id가 없습니다");
             var types = MiniJson.List(d, "types");

@@ -52,7 +52,6 @@ namespace KingdomDeck.Presentation
             string reason;
             switch (game.EndReason)
             {
-                case EndReason.DragonsGone: reason = "드래곤 더미가 모두 소진되었습니다"; break;
                 case EndReason.ThreePiles: reason = "공급 더미 3개가 소진되었습니다"; break;
                 case EndReason.CastleDestroyed: reason = (game.CastleHp(Me) <= 0 ? "내 성이" : "AI의 성이") + " 함락되었습니다!"; break;
                 default: reason = "턴 제한에 도달했습니다"; break;
@@ -160,7 +159,7 @@ namespace KingdomDeck.Presentation
             if (n == 0) return;
             float width = handArea.rect.width > 10 ? handArea.rect.width : 1080f;
             float cw = CardView.W * HandScale;
-            float spacing = n > 1 ? Mathf.Min(cw + 8, (width - cw - 24) / (n - 1)) : 0;
+            float spacing = n > 1 ? Mathf.Min(cw + 6, (width - cw - 16) / (n - 1)) : 0;
             float total = spacing * (n - 1);
             for (int i = 0; i < n; i++)
             {
