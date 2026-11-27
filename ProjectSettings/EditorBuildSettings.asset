@@ -11,6 +11,9 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/New Scene.unity
     guid: 5c700b5d672cd724c8e3f48d9f1f0a3d
+  - enabled: 1
+    path: Assets/Scenes/Bubble.unity
+    guid: 47e2b9c38e9c2e84b9c77a88438754a5
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_UseUCBPForAssetBundles: 0
