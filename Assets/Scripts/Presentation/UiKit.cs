@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -77,8 +78,43 @@ namespace KingdomDeck.Presentation
     /// <summary>코드로 UI를 만드는 도구들 (모서리 둥근 스프라이트, 텍스트, 버튼 등)</summary>
     public static class UiKit
     {
-        static Font font;
-        public static Font Font => font != null ? font : (font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"));
+        // ---------------- 글꼴 (TextMeshPro + 한글 Noto Sans KR) ----------------
+
+        /// <summary>KingdomDeckGame이 시작할 때 넣어 준다. 비어 있으면 TMP 기본 글꼴(한글 없음)</summary>
+        public static TMP_FontAsset FontRegular, FontBold;
+
+        static TMP_FontAsset Regular => FontRegular != null ? FontRegular : TMP_Settings.defaultFontAsset;
+        static TMP_FontAsset Bold => FontBold != null ? FontBold : Regular;
+
+        public enum TextFx { None, Outline, Shadow }
+
+        // 글꼴 × 효과별 공유 재질 (글자마다 재질을 만들면 묶어 그리기가 깨진다)
+        static readonly Dictionary<string, Material> textMats = new Dictionary<string, Material>();
+
+        public static Material TextMaterial(TMP_FontAsset font, TextFx fx)
+        {
+            if (font == null || fx == TextFx.None) return font != null ? font.material : null;
+            string key = font.GetInstanceID() + ":" + fx;
+            if (textMats.TryGetValue(key, out var m) && m != null) return m;
+            m = new Material(font.material) { name = font.name + "_" + fx };
+            if (fx == TextFx.Outline)
+            {
+                m.EnableKeyword(ShaderUtilities.Keyword_Outline);
+                m.SetFloat(ShaderUtilities.ID_OutlineWidth, 0.22f);
+                m.SetColor(ShaderUtilities.ID_OutlineColor, new Color(0, 0, 0, 0.95f));
+                m.SetFloat(ShaderUtilities.ID_FaceDilate, 0.12f);
+            }
+            else
+            {
+                m.EnableKeyword(ShaderUtilities.Keyword_Underlay);
+                m.SetColor(ShaderUtilities.ID_UnderlayColor, new Color(0, 0, 0, 0.75f));
+                m.SetFloat(ShaderUtilities.ID_UnderlayOffsetX, 0.6f);
+                m.SetFloat(ShaderUtilities.ID_UnderlayOffsetY, -0.6f);
+                m.SetFloat(ShaderUtilities.ID_UnderlaySoftness, 0.25f);
+            }
+            textMats[key] = m;
+            return m;
+        }
 
         static Sprite rounded, roundedSmall, circle, glow, soft;
 
@@ -197,33 +233,54 @@ namespace KingdomDeck.Presentation
             return img;
         }
 
-        public static Text Text(string name, Transform parent, string text, int size, Color color, TextAnchor align = TextAnchor.MiddleCenter, FontStyle style = FontStyle.Normal)
+        public static TMP_Text Text(string name, Transform parent, string text, int size, Color color, TextAnchor align = TextAnchor.MiddleCenter, FontStyle style = FontStyle.Normal)
         {
             var rt = Rect(name, parent);
-            var t = rt.gameObject.AddComponent<Text>();
-            t.font = Font;
+            var t = rt.gameObject.AddComponent<TextMeshProUGUI>();
+            bool bold = style == FontStyle.Bold || style == FontStyle.BoldAndItalic;
+            t.font = bold ? Bold : Regular;
             t.text = text;
             t.fontSize = size;
             t.color = color;
-            t.alignment = align;
-            t.fontStyle = style;
-            t.supportRichText = true;
+            t.alignment = Align(align);
+            t.richText = true;
             t.raycastTarget = false;
-            t.horizontalOverflow = HorizontalWrapMode.Wrap;
-            t.verticalOverflow = VerticalWrapMode.Overflow;
+            t.textWrappingMode = TextWrappingModes.Normal;
+            t.overflowMode = TextOverflowModes.Overflow;
+            t.extraPadding = true;
             return t;
         }
 
+        static TextAlignmentOptions Align(TextAnchor a)
+        {
+            switch (a)
+            {
+                case TextAnchor.UpperLeft: return TextAlignmentOptions.TopLeft;
+                case TextAnchor.UpperCenter: return TextAlignmentOptions.Top;
+                case TextAnchor.UpperRight: return TextAlignmentOptions.TopRight;
+                case TextAnchor.MiddleLeft: return TextAlignmentOptions.Left;
+                case TextAnchor.MiddleRight: return TextAlignmentOptions.Right;
+                case TextAnchor.LowerLeft: return TextAlignmentOptions.BottomLeft;
+                case TextAnchor.LowerCenter: return TextAlignmentOptions.Bottom;
+                case TextAnchor.LowerRight: return TextAlignmentOptions.BottomRight;
+                default: return TextAlignmentOptions.Center;
+            }
+        }
+
+        /// <summary>글자: 그림자 재질 / 그림: Shadow 컴포넌트</summary>
         public static T Shadowed<T>(this T graphic, float dist = 2f, float alpha = 0.75f) where T : Graphic
         {
+            if (graphic is TMP_Text tmp) { tmp.fontSharedMaterial = TextMaterial(tmp.font, TextFx.Shadow); return graphic; }
             var s = graphic.gameObject.AddComponent<Shadow>();
             s.effectColor = new Color(0, 0, 0, alpha);
             s.effectDistance = new Vector2(dist, -dist);
             return graphic;
         }
 
+        /// <summary>글자: 검은 외곽선 재질 / 그림: Outline 컴포넌트</summary>
         public static T Outlined<T>(this T graphic, Color color, float dist = 1.5f) where T : Graphic
         {
+            if (graphic is TMP_Text tmp) { tmp.fontSharedMaterial = TextMaterial(tmp.font, TextFx.Outline); return graphic; }
             var o = graphic.gameObject.AddComponent<Outline>();
             o.effectColor = color;
             o.effectDistance = new Vector2(dist, -dist);
@@ -234,7 +291,7 @@ namespace KingdomDeck.Presentation
         {
             public Button Button;
             public Image Bg;
-            public Text Label;
+            public TMP_Text Label;
             public RectTransform Rt => (RectTransform)Button.transform;
             public bool Interactable
             {

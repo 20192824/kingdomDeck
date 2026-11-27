@@ -37,8 +37,10 @@ namespace KingdomDeck.Presentation
             if (mats.TryGetValue(key, out var m) && m != null) return m;
             if (unlit == null) unlit = Shader.Find("Universal Render Pipeline/Unlit") ?? Shader.Find("Unlit/Color");
             m = new Material(unlit) { name = "KD_" + key };
-            m.SetColor("_BaseColor", c);
-            m.SetColor("_Color", c);
+            // 밝기를 1보다 크게(HDR) 해서 블룸이 번지게 한다
+            var hdr = new Color(c.r * 1.8f, c.g * 1.8f, c.b * 1.8f, c.a);
+            m.SetColor("_BaseColor", hdr);
+            m.SetColor("_Color", hdr);
             mats[key] = m;
             return m;
         }

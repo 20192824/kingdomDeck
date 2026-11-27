@@ -1,7 +1,7 @@
 {
     "name": "KingdomDeck.Presentation",
     "rootNamespace": "KingdomDeck.Presentation",
-    "references": ["KingdomDeck.Engine", "KingdomDeck.AI", "Unity.InputSystem", "UnityEngine.UI"],
+    "references": ["KingdomDeck.Engine", "KingdomDeck.AI", "Unity.InputSystem", "UnityEngine.UI", "Unity.TextMeshPro", "Unity.RenderPipelines.Core.Runtime", "Unity.RenderPipelines.Universal.Runtime"],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

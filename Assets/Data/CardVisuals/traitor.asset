@@ -15,7 +15,7 @@ MonoBehaviour:
   cardId: traitor
   frameColor: {r: 0.2901961, g: 0.16470589, b: 0.3529412, a: 1}
   artColor: {r: 0.11764706, g: 0.078431375, b: 0.14117648, a: 1}
-  art: {fileID: 0}
+  art: {fileID: 2800000, guid: 318077f2c6eeb3643b895dc1d1e4903f, type: 3}
   summonPrefab: {fileID: 7197400602973039573, guid: b31eb57ecf88b0240a16063793fa3d9f, type: 3}
   sfx: {fileID: 0}
   style: 6

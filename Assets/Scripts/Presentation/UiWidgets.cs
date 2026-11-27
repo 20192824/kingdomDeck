@@ -1,5 +1,6 @@
 using System;
 using KingdomDeck.Engine;
+using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -11,7 +12,7 @@ namespace KingdomDeck.Presentation
     {
         public RectTransform Root;
         Image fill, ghost, back;
-        Text value;
+        TMP_Text value;
         float shown, ghostV;
         int target;
         float flash;
@@ -23,7 +24,7 @@ namespace KingdomDeck.Presentation
             var root = UiKit.Panel("HpBar", parent, Palette.PanelDark);
             bar.Root = root.rectTransform;
 
-            var label = UiKit.Text("Title", root.transform, title, 18, Palette.Text, alignRight ? TextAnchor.MiddleRight : TextAnchor.MiddleLeft, FontStyle.Bold);
+            var label = UiKit.Text("Title", root.transform, title, 26, Palette.Text, alignRight ? TextAnchor.MiddleRight : TextAnchor.MiddleLeft, FontStyle.Bold);
             label.rectTransform.Place(new Vector2(0, 0.5f), new Vector2(1, 1), new Vector2(14, 0), new Vector2(-14, -4));
             label.Shadowed();
 
@@ -36,8 +37,8 @@ namespace KingdomDeck.Presentation
             var shine = UiKit.Image("Shine", bar.fill.transform, new Color(1, 1, 1, 0.18f), UiKit.RoundedSmall);
             shine.rectTransform.Place(new Vector2(0, 0.55f), Vector2.one, new Vector2(2, 0), new Vector2(-2, -1));
 
-            bar.value = UiKit.Text("Value", root.transform, KingdomDeck.Engine.Game.StartingHp.ToString(), 28, Palette.Text, TextAnchor.MiddleCenter, FontStyle.Bold);
-            bar.value.rectTransform.Place(new Vector2(1, 0), new Vector2(1, 0.62f), new Vector2(-68, 2), new Vector2(-6, 0));
+            bar.value = UiKit.Text("Value", root.transform, KingdomDeck.Engine.Game.StartingHp.ToString(), 42, Palette.Text, TextAnchor.MiddleCenter, FontStyle.Bold);
+            bar.value.rectTransform.Place(new Vector2(1, 0), new Vector2(1, 0.62f), new Vector2(-74, 2), new Vector2(-6, 0));
             bar.value.Shadowed(2f);
             bar.shown = bar.ghostV = bar.target = KingdomDeck.Engine.Game.StartingHp;
             bar.Apply();
@@ -79,7 +80,7 @@ namespace KingdomDeck.Presentation
     }
 
     /// <summary>공급처 한 줄 (카드 이름, 비용, 남은 수량)</summary>
-    public class SupplyTile : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IPointerClickHandler
+    public class SupplyTile : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IPointerClickHandler, IPointerDownHandler, IPointerUpHandler
     {
         public string CardId;
         public event Action<SupplyTile> Clicked;
@@ -88,7 +89,7 @@ namespace KingdomDeck.Presentation
         Image bg, dim, chip;
         Outline outline;
         Color tint = Color.clear;
-        Text count, nameText;
+        TMP_Text count, nameText;
         bool hovered;
         int lastCount = -1;
         float pulse;
@@ -178,7 +179,16 @@ namespace KingdomDeck.Presentation
         public void OnPointerExit(PointerEventData e) { hovered = false; Hovered?.Invoke(this, false); }
         public void OnPointerClick(PointerEventData e)
         {
-            if (e.button == PointerEventData.InputButton.Left) Clicked?.Invoke(this);
+            if (e.button != PointerEventData.InputButton.Left) return;
+            if (press.ConsumeClick()) return;
+            Clicked?.Invoke(this);
         }
+
+        /// <summary>길게 누르기 시작(true) / 손 뗌(false)</summary>
+        public event Action<SupplyTile, bool> LongPressed;
+        readonly LongPressTracker press = new LongPressTracker();
+        public void OnPointerDown(PointerEventData e) => press.Down(e);
+        public void OnPointerUp(PointerEventData e) { if (press.Up()) LongPressed?.Invoke(this, false); }
+        void LateUpdate() { if (press.Tick()) LongPressed?.Invoke(this, true); }
     }
 }

@@ -20,7 +20,10 @@ namespace KingdomDeck.Presentation
             return t;
         }
 
-        static Texture Render(string cardId, CardVisual vis)
+        /// <summary>카드 그림을 새로 찍는다 (에디터에서 PNG로 미리 구울 때 사용)</summary>
+        public static Texture2D RenderArt(string cardId, CardVisual vis) => Render(cardId, vis);
+
+        static Texture2D Render(string cardId, CardVisual vis)
         {
             const int w = 256, h = 160;
             Vector3 origin = new Vector3(5000, 0, 5000);

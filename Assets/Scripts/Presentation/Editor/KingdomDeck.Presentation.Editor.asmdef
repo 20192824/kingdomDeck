@@ -1,7 +1,7 @@
 {
     "name": "KingdomDeck.Presentation.Editor",
     "rootNamespace": "KingdomDeck.Presentation.EditorTools",
-    "references": ["KingdomDeck.Engine", "KingdomDeck.Presentation"],
+    "references": ["KingdomDeck.Engine", "KingdomDeck.Presentation", "Unity.TextMeshPro"],
     "includePlatforms": ["Editor"],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

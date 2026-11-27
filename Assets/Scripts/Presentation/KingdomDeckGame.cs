@@ -21,6 +21,8 @@ namespace KingdomDeck.Presentation
     {
         [SerializeField] TextAsset cardsJson;
         [SerializeField] CardVisualLibrary library;
+        [Tooltip("한글 TextMeshPro 글꼴 (Noto Sans KR)")]
+        [SerializeField] TMPro.TMP_FontAsset fontRegular, fontBold;
         [Tooltip("테스트용: 내 쪽도 AI(어려움)가 대신 둔다")]
         [SerializeField] bool autoPlayMe;
         Bot demoBot;
@@ -79,6 +81,8 @@ namespace KingdomDeck.Presentation
             field = new GameObject("Battlefield").AddComponent<Battlefield>();
             field.Init(cam, library);
 
+            UiKit.FontRegular = fontRegular;
+            UiKit.FontBold = fontBold;
             BuildUi();
             ShowMenu(true);
         }
@@ -132,6 +136,9 @@ namespace KingdomDeck.Presentation
             foreach (Transform c in fxLayer) Destroy(c.gameObject);
             preview = null;
             bannerGroup.alpha = 0;
+            HidePreview();
+            ResetDrawers();
+            Time.timeScale = 1f;
             ClearLog();
 
             game = g;
@@ -287,7 +294,7 @@ namespace KingdomDeck.Presentation
                 case GameEventType.TurnStarted:
                     Log("");
                     LogEvent(e);
-                    if (e.Player == Me) skipAiTurn = false;
+                    if (e.Player == Me) { skipAiTurn = false; supplyDismissed = false; }
                     Sfx.Play(Sfx.Chime, 0.6f, e.Player == Me ? 1.2f : 0.9f);
                     if (e.Snap != null) ApplySnapshot(e.Snap);
                     yield return Banner(e.Player == Me ? "나의 턴" : "AI의 턴", e.Player == Me ? Palette.Player : Palette.Enemy, 0.75f);
@@ -438,7 +445,9 @@ namespace KingdomDeck.Presentation
             shownHp[e.Player] = e.Value;
             hpBars[e.Player].Set(e.Value, false);
             field.SetCastleHp(e.Player, e.Value);
-            FloatText("-" + e.Amount, Palette.Bad, field.ScreenPoint(field.CastleTop(e.Player)) + new Vector2(0, 20), 46 + e.Amount * 2);
+            FloatText("-" + e.Amount, Palette.Bad, field.ScreenPoint(field.CastleTop(e.Player)) + new Vector2(0, 20), 72 + e.Amount * 4);
+            // 내 성이 맞으면 붉게, 상대 성이 맞으면 하얗게 번쩍
+            Flash(e.Player == Me ? new Color(1f, 0.12f, 0.08f, 0.32f) : new Color(1f, 0.95f, 0.85f, 0.16f));
         }
 
         IEnumerator PlayCardAnim(GameEvent e)
@@ -455,7 +464,7 @@ namespace KingdomDeck.Presentation
             {
                 if (vis.sfx != null) Sfx.Play(vis.sfx); else Sfx.Play(Sfx.Coin, 0.45f, UnityEngine.Random.Range(0.95f, 1.1f));
                 StartCoroutine(field.CoinPop(e.CardId, e.Player, def.Coins));
-                FloatText("+" + def.Coins, Palette.Gold, ScreenOf(coinsChip) + new Vector2(0, -110), 30);
+                FloatText("+" + def.Coins, Palette.Gold, ScreenOf(coinsChip) + new Vector2(0, 70), 44);
                 yield return MoveGhost(ghost, start, target, 1f, 0.55f, 0.16f);
                 DestroyGhost(ghost);
                 yield break;

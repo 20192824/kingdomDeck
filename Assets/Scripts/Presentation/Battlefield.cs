@@ -32,6 +32,7 @@ namespace KingdomDeck.Presentation
 
             SetupCamera();
             SetupLight();
+            SetupPostProcessing();
             BuildGround();
 
             castles[0] = SummonFactory.Castle("PlayerCastle", Palette.Player).transform;
@@ -52,10 +53,38 @@ namespace KingdomDeck.Presentation
             Cam.transform.position = new Vector3(0, 18f, -15.2f);
             Cam.transform.rotation = Quaternion.Euler(52f, 0, 0);
             Cam.fieldOfView = 31f;
+            camBasePos = Cam.transform.position;
             Cam.clearFlags = CameraClearFlags.SolidColor;
             Cam.backgroundColor = Palette.Hex("#1b1712");
             Cam.nearClipPlane = 0.3f;
             Cam.farClipPlane = 200f;
+        }
+
+        float fittedAspect = -1f;
+
+        /// <summary>
+        /// 전장 칸의 가로세로 비율에 맞춰 시야각을 정한다.
+        /// 세로 화면처럼 폭이 좁으면 세로 시야각을 넓혀서 두 성과 길이 좌우로 잘리지 않게 한다.
+        /// </summary>
+        public void FitAspect(float aspect)
+        {
+            if (aspect <= 0f || Mathf.Abs(aspect - fittedAspect) < 0.005f) return;
+            fittedAspect = aspect;
+            if (aspect >= 1.2f)
+            {
+                // 가로로 넓은 화면 (PC)
+                Cam.fieldOfView = 31f;
+                Cam.transform.rotation = Quaternion.Euler(52f, 0, 0);
+                Cam.transform.position = camBasePos = new Vector3(0, 18f, -15.2f);
+                return;
+            }
+            // 세로 화면: 두 성이 세로로 꽉 차게, 좌우 숲은 잘려도 된다
+            const float wantHorizontal = 33f;
+            float h = wantHorizontal * Mathf.Deg2Rad;
+            float v = 2f * Mathf.Atan(Mathf.Tan(h / 2f) / Mathf.Max(0.3f, aspect)) * Mathf.Rad2Deg;
+            Cam.fieldOfView = Mathf.Clamp(v, 36f, 58f);
+            Cam.transform.rotation = Quaternion.Euler(54f, 0, 0);
+            Cam.transform.position = camBasePos = new Vector3(0, 21f, -15.5f);
         }
 
         void SetupLight()
@@ -142,14 +171,119 @@ namespace KingdomDeck.Presentation
         void Kill(GameObject go)
         {
             if (go == null) return;
+            if (fxType.ContainsKey(go)) { Release(go); return; }
             temps.Remove(go);
             Destroy(go);
+        }
+
+        // ---------------- 이펙트 조각 재사용 (모바일에서 매번 만들고 지우지 않도록) ----------------
+
+        readonly Dictionary<PrimitiveType, Stack<GameObject>> pool = new Dictionary<PrimitiveType, Stack<GameObject>>();
+        readonly Dictionary<GameObject, PrimitiveType> fxType = new Dictionary<GameObject, PrimitiveType>();
+
+        GameObject Pooled(PrimitiveType type, Vector3 pos, float size, Material mat, bool track = true)
+        {
+            if (!pool.TryGetValue(type, out var stack)) pool[type] = stack = new Stack<GameObject>();
+            GameObject go = null;
+            while (stack.Count > 0 && go == null) go = stack.Pop();
+            if (go == null)
+            {
+                go = SummonFactory.Prim(type, root, pos, Vector3.one * size, mat, null, "FX");
+                go.GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                go.GetComponent<MeshRenderer>().receiveShadows = false;
+                fxType[go] = type;
+            }
+            else
+            {
+                go.SetActive(true);
+                go.transform.position = pos;
+                go.transform.localScale = Vector3.one * size;
+                go.GetComponent<MeshRenderer>().sharedMaterial = mat;
+            }
+            go.transform.rotation = Random.rotation;
+            if (track) temps.Add(go);
+            return go;
+        }
+
+        void Release(GameObject go)
+        {
+            if (go == null || !fxType.TryGetValue(go, out var type)) return;
+            temps.Remove(go);
+            go.SetActive(false);
+            pool[type].Push(go);
+        }
+
+        // ---------------- 타격감: 카메라 흔들림, 히트스톱 ----------------
+
+        Vector3 camBasePos;
+        float shake;
+        int hitStops;
+
+        public void Shake(float amount) => shake = Mathf.Max(shake, amount);
+
+        /// <summary>맞는 순간 아주 짧게 시간을 멈춘다 (건너뛰기 중에는 안 함)</summary>
+        public void HitStop(float seconds)
+        {
+            if (Anim.Skipping || seconds <= 0) return;
+            StartCoroutine(HitStopRoutine(seconds));
+        }
+
+        IEnumerator HitStopRoutine(float seconds)
+        {
+            hitStops++;
+            Time.timeScale = 0.05f;
+            yield return new WaitForSecondsRealtime(seconds / Mathf.Max(1f, Anim.Speed * 0.5f));
+            if (--hitStops <= 0) { hitStops = 0; Time.timeScale = 1f; }
+        }
+
+        void LateUpdate()
+        {
+            if (Cam == null) return;
+            if (shake > 0.001f)
+            {
+                Cam.transform.position = camBasePos + Random.insideUnitSphere * shake;
+                shake = Mathf.MoveTowards(shake, 0, Time.unscaledDeltaTime * 1.6f);
+            }
+            else Cam.transform.position = camBasePos;
+        }
+
+        void OnDisable()
+        {
+            Time.timeScale = 1f;
+        }
+
+        /// <summary>빛나는 부분이 번지는 블룸, 살짝 어둡게 감싸는 비네트</summary>
+        void SetupPostProcessing()
+        {
+            var data = UnityEngine.Rendering.Universal.CameraExtensions.GetUniversalAdditionalCameraData(Cam);
+            if (data != null) data.renderPostProcessing = true;
+            var volGo = new GameObject("PostFX");
+            volGo.transform.SetParent(transform, false);
+            var vol = volGo.AddComponent<UnityEngine.Rendering.Volume>();
+            vol.isGlobal = true;
+            vol.priority = 10;
+            var profile = ScriptableObject.CreateInstance<UnityEngine.Rendering.VolumeProfile>();
+            var bloom = profile.Add<UnityEngine.Rendering.Universal.Bloom>(true);
+            bloom.intensity.Override(1.2f);
+            bloom.threshold.Override(0.85f);
+            bloom.scatter.Override(0.65f);
+            var vig = profile.Add<UnityEngine.Rendering.Universal.Vignette>(true);
+            vig.intensity.Override(0.22f);
+            vig.smoothness.Override(0.5f);
+            var color = profile.Add<UnityEngine.Rendering.Universal.ColorAdjustments>(true);
+            color.saturation.Override(10f);
+            color.contrast.Override(8f);
+            vol.sharedProfile = profile;
         }
 
         /// <summary>건너뛰기: 남아 있는 연출 오브젝트를 모두 지운다</summary>
         public void ClearTemps()
         {
-            foreach (var t in temps) if (t != null) Destroy(t);
+            foreach (var t in new List<GameObject>(temps))
+            {
+                if (t == null) continue;
+                if (fxType.ContainsKey(t)) Release(t); else Destroy(t);
+            }
             temps.Clear();
             for (int i = 0; i < 2; i++) if (castles[i] != null && !fallen[i]) castles[i].position = castleHome[i];
         }
@@ -368,11 +502,10 @@ namespace KingdomDeck.Presentation
         IEnumerator FireBall(Vector3 from, Vector3 to)
         {
             var colors = new[] { "#ffd040", "#ff8a20", "#ff4a10" };
-            var ball = SummonFactory.Prim(PrimitiveType.Sphere, root, from, Vector3.one * 0.25f, SummonFactory.Glow(colors[Random.Range(0, 3)]));
-            temps.Add(ball);
+            var ball = Pooled(PrimitiveType.Sphere, from, 0.25f, SummonFactory.Glow(colors[Random.Range(0, 3)]));
             float t = 0;
             float life = 0.35f;
-            while (t < life && ball != null && !Anim.Skipping)
+            while (t < life && ball != null && ball.activeSelf && !Anim.Skipping)
             {
                 float k = t / life;
                 ball.transform.position = Vector3.Lerp(from, to, k);
@@ -415,6 +548,9 @@ namespace KingdomDeck.Presentation
             var c = castles[p];
             Sfx.Play(Sfx.Boom, Mathf.Clamp(0.5f + amount * 0.1f, 0.5f, 1f));
             Burst(CastleTop(p), Palette.Hex("#8a8680"), 8 + amount * 4, 4f, 0.16f, 0.8f, 9f);
+            Burst(CastleCenter(p) + Vector3.up * 0.5f, Palette.Hex("#ffb040"), 6 + amount * 2, 3f, 0.1f, 0.35f, 2f, true);
+            Shake(Mathf.Clamp(0.06f + amount * 0.035f, 0.08f, 0.3f));
+            if (amount >= 3) HitStop(0.05f + Mathf.Min(amount, 6) * 0.012f);
             float strength = Mathf.Clamp(0.08f + amount * 0.04f, 0.1f, 0.35f);
             yield return Anim.Run(0.45f, k =>
             {
@@ -533,8 +669,7 @@ namespace KingdomDeck.Presentation
 
         IEnumerator SmokePuff(Vector3 pos, Material mat)
         {
-            var puff = SummonFactory.Prim(PrimitiveType.Sphere, root, pos, Vector3.one * 0.2f, mat);
-            puff.GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            var puff = Pooled(PrimitiveType.Sphere, pos, 0.2f, mat, false);
             float life = Random.Range(1.6f, 2.4f);
             float t = 0;
             Vector3 drift = new Vector3(Random.Range(0.2f, 0.5f), 1.1f, Random.Range(-0.2f, 0.2f));
@@ -547,7 +682,7 @@ namespace KingdomDeck.Presentation
                 yield return null;
                 t += Time.deltaTime;
             }
-            Destroy(puff);
+            Release(puff);
         }
 
         // =====================================================================
@@ -566,11 +701,9 @@ namespace KingdomDeck.Presentation
             var vel = new Vector3[count];
             for (int i = 0; i < count; i++)
             {
-                parts[i] = SummonFactory.Prim(i % 2 == 0 ? PrimitiveType.Cube : PrimitiveType.Sphere, root, pos, Vector3.one * size, mat, Random.rotation.eulerAngles, "Particle");
-                parts[i].GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                parts[i] = Pooled(i % 2 == 0 ? PrimitiveType.Cube : PrimitiveType.Sphere, pos, size, mat);
                 vel[i] = Random.onUnitSphere * speed * Random.Range(0.4f, 1f);
                 vel[i].y = Mathf.Abs(vel[i].y) * 0.8f + speed * 0.3f;
-                temps.Add(parts[i]);
             }
             float t = 0;
             while (t < life && !Anim.Skipping)
@@ -579,7 +712,7 @@ namespace KingdomDeck.Presentation
                 float k = t / life;
                 for (int i = 0; i < count; i++)
                 {
-                    if (parts[i] == null) continue;
+                    if (parts[i] == null || !parts[i].activeSelf) continue;
                     vel[i].y -= gravity * dt;
                     var tr = parts[i].transform;
                     tr.position += vel[i] * dt;
@@ -589,7 +722,7 @@ namespace KingdomDeck.Presentation
                 yield return null;
                 t += dt;
             }
-            foreach (var p in parts) Kill(p);
+            foreach (var p in parts) if (p != null && p.activeSelf) Release(p);
         }
     }
 }

@@ -15,7 +15,7 @@ MonoBehaviour:
   cardId: smithy
   frameColor: {r: 0.36862746, g: 0.36862746, b: 0.4, a: 1}
   artColor: {r: 0.22745098, g: 0.14117648, b: 0.1254902, a: 1}
-  art: {fileID: 0}
+  art: {fileID: 2800000, guid: afe234f0196ed914a9c18aff5a114016, type: 3}
   summonPrefab: {fileID: 6602876134161369201, guid: 4ee7fc7badbc22141ab74c8dc7bda806, type: 3}
   sfx: {fileID: 0}
   style: 0

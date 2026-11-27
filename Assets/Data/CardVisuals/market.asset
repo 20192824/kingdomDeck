@@ -15,7 +15,7 @@ MonoBehaviour:
   cardId: market
   frameColor: {r: 0.70980394, g: 0.5294118, b: 0.22745098, a: 1}
   artColor: {r: 0.3529412, g: 0.22745098, b: 0.16470589, a: 1}
-  art: {fileID: 0}
+  art: {fileID: 2800000, guid: 93c005d00c4d7a24a8ecf12e3336ff3f, type: 3}
   summonPrefab: {fileID: 3419119231162327658, guid: f56d136858bf6624e8a1a66754cd9b37, type: 3}
   sfx: {fileID: 0}
   style: 0

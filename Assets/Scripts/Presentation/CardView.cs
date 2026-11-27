@@ -1,5 +1,6 @@
 using System;
 using KingdomDeck.Engine;
+using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -9,7 +10,52 @@ namespace KingdomDeck.Presentation
     public enum CardHighlight { None, Playable, Buyable, Selected, Danger }
 
     /// <summary>UI 카드 한 장. 코드로 만든다. 마우스를 올리면 확대된다.</summary>
-    public class CardView : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IPointerClickHandler
+    /// <summary>
+    /// 길게 누르기 판정. 0.4초 이상 누르고 있고 끌기(스크롤)가 시작되지 않았으면 길게 누른 것.
+    /// </summary>
+    public sealed class LongPressTracker
+    {
+        public float Delay = 0.4f;
+        PointerEventData data;
+        float downTime;
+        bool pressing, fired, suppressClick;
+
+        public void Down(PointerEventData e)
+        {
+            data = e;
+            downTime = Time.unscaledTime;
+            pressing = true;
+            fired = false;
+        }
+
+        /// <summary>손을 뗌. 길게 누르기가 진행 중이었으면 true</summary>
+        public bool Up()
+        {
+            bool wasFired = pressing && fired;
+            pressing = false;
+            suppressClick = wasFired;
+            return wasFired;
+        }
+
+        /// <summary>매 프레임 호출. 이번 프레임에 길게 누르기가 시작되면 true</summary>
+        public bool Tick()
+        {
+            if (!pressing || fired) return false;
+            if (data != null && data.dragging) { pressing = false; return false; }
+            if (Time.unscaledTime - downTime < Delay) return false;
+            fired = true;
+            return true;
+        }
+
+        public bool ConsumeClick()
+        {
+            bool s = suppressClick;
+            suppressClick = false;
+            return s;
+        }
+    }
+
+    public class CardView : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IPointerClickHandler, IPointerDownHandler, IPointerUpHandler
     {
         public const float W = 150f, H = 214f;
 
@@ -24,7 +70,7 @@ namespace KingdomDeck.Presentation
 
         RectTransform rt;
         Image glow, dim, frame;
-        Text nameText;
+        TMP_Text nameText;
         GameObject backFace;
         CanvasGroup group;
         bool hovered;
@@ -46,6 +92,7 @@ namespace KingdomDeck.Presentation
             cv.rt = root;
             cv.group = root.gameObject.AddComponent<CanvasGroup>();
             cv.Build(def, vis, art);
+            if (Application.isMobilePlatform) cv.HoverZoom = false; // 터치에는 마우스 올리기가 없다 (길게 누르기로 확대)
             cv.SetBase(Vector2.zero, scale, 0f, true);
             return cv;
         }
@@ -106,7 +153,6 @@ namespace KingdomDeck.Presentation
             var bodyText = UiKit.Text("Body", rt, body, body.Length > 30 ? 11 : 13, Palette.Hex("#3a2a1a"), TextAnchor.MiddleCenter);
             float bottom = def.Is(CardType.Siege) || def.Is(CardType.Traitor) ? 40 : 8;
             bodyText.rectTransform.Place(new Vector2(0, 0), new Vector2(1, 1), new Vector2(10, bottom), new Vector2(-10, -140));
-            bodyText.lineSpacing = 0.95f;
 
             if (def.Is(CardType.Treasure))
             {
@@ -248,7 +294,22 @@ namespace KingdomDeck.Presentation
         public void OnPointerClick(PointerEventData e)
         {
             if (!interactable || e.button != PointerEventData.InputButton.Left) return;
+            if (press.ConsumeClick()) return; // 길게 누른 뒤 손을 뗀 것은 클릭이 아니다
             Clicked?.Invoke(this);
+        }
+
+        // ---------------- 길게 누르기 (모바일에서 카드 크게 보기) ----------------
+
+        /// <summary>길게 누르기 시작(true) / 손 뗌(false)</summary>
+        public event Action<CardView, bool> LongPressed;
+        readonly LongPressTracker press = new LongPressTracker();
+
+        public void OnPointerDown(PointerEventData e) => press.Down(e);
+        public void OnPointerUp(PointerEventData e) { if (press.Up()) LongPressed?.Invoke(this, false); }
+
+        void LateUpdate()
+        {
+            if (press.Tick()) LongPressed?.Invoke(this, true);
         }
 
         /// <summary>애니메이션용으로 위치를 직접 움직일 때 (Update가 덮어쓰지 않도록)</summary>

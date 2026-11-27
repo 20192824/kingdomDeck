@@ -145,6 +145,97 @@ namespace KingdomDeck.Presentation.EditorTools
             }
         }
 
+        const string FontRegularSrc = "Assets/Fonts/NotoSansKR-Regular.otf";
+        const string FontBoldSrc = "Assets/Fonts/NotoSansKR-Bold.otf";
+        const string FontRegularAsset = "Assets/Fonts/NotoSansKR-Regular SDF.asset";
+        const string FontBoldAsset = "Assets/Fonts/NotoSansKR-Bold SDF.asset";
+
+        /// <summary>Noto Sans KR로 TextMeshPro 동적 글꼴 에셋을 만들고, 열린 씬의 게임 컴포넌트에 연결한다.</summary>
+        [MenuItem("왕국의 덱/한글 폰트 에셋 만들기")]
+        public static void BuildFonts()
+        {
+            var regular = MakeFontAsset(FontRegularSrc, FontRegularAsset);
+            var bold = MakeFontAsset(FontBoldSrc, FontBoldAsset);
+            // TMP 기본 글꼴에 한글이 없을 때 대신 쓰도록 등록
+            var settings = TMPro.TMP_Settings.instance;
+            if (settings != null && TMPro.TMP_Settings.fallbackFontAssets != null && regular != null && !TMPro.TMP_Settings.fallbackFontAssets.Contains(regular))
+            {
+                TMPro.TMP_Settings.fallbackFontAssets.Add(regular);
+                EditorUtility.SetDirty(settings);
+            }
+            var game = Object.FindFirstObjectByType<KingdomDeckGame>();
+            if (game != null)
+            {
+                var so = new SerializedObject(game);
+                so.FindProperty("fontRegular").objectReferenceValue = regular;
+                so.FindProperty("fontBold").objectReferenceValue = bold;
+                so.ApplyModifiedPropertiesWithoutUndo();
+                EditorSceneManager.MarkSceneDirty(game.gameObject.scene);
+                EditorSceneManager.SaveScene(game.gameObject.scene);
+            }
+            AssetDatabase.SaveAssets();
+            Debug.Log("왕국의 덱: 한글 폰트 에셋 준비 완료" + (game != null ? " (씬에 연결함)" : ""));
+        }
+
+        static TMPro.TMP_FontAsset MakeFontAsset(string src, string dst)
+        {
+            var existing = AssetDatabase.LoadAssetAtPath<TMPro.TMP_FontAsset>(dst);
+            if (existing != null) return existing;
+            var font = AssetDatabase.LoadAssetAtPath<Font>(src);
+            if (font == null) { Debug.LogError("폰트 파일이 없습니다: " + src); return null; }
+            var fa = TMPro.TMP_FontAsset.CreateFontAsset(font, 72, 8, UnityEngine.TextCore.LowLevel.GlyphRenderMode.SDFAA, 2048, 2048,
+                TMPro.AtlasPopulationMode.Dynamic, true);
+            fa.name = Path.GetFileNameWithoutExtension(dst);
+            AssetDatabase.CreateAsset(fa, dst);
+            fa.atlasTextures[0].name = fa.name + " Atlas";
+            AssetDatabase.AddObjectToAsset(fa.atlasTextures[0], fa);
+            fa.material.name = fa.name + " Material";
+            AssetDatabase.AddObjectToAsset(fa.material, fa);
+            EditorUtility.SetDirty(fa);
+            AssetDatabase.SaveAssets();
+            return fa;
+        }
+
+        const string ArtDir = "Assets/Data/CardVisuals/Art";
+
+        /// <summary>
+        /// 카드 그림을 소환 모델로 찍어 PNG로 저장하고 CardVisual.art에 연결한다.
+        /// 게임 시작 때마다 찍지 않아도 되어 모바일에서 빨라진다. 이미 그림이 있는 카드도 다시 찍는다.
+        /// (직접 그린 그림으로 바꾸려면 CardVisual.art에 그 텍스처를 넣으면 된다)
+        /// </summary>
+        [MenuItem("왕국의 덱/카드 그림 굽기")]
+        public static void BakeCardArt()
+        {
+            EnsureDir(ArtDir);
+            var library = AssetDatabase.LoadAssetAtPath<CardVisualLibrary>(LibraryPath);
+            if (library == null) { BuildVisuals(); library = AssetDatabase.LoadAssetAtPath<CardVisualLibrary>(LibraryPath); }
+            int n = 0;
+            foreach (var vis in library.visuals)
+            {
+                if (vis == null) continue;
+                string path = ArtDir + "/" + vis.cardId + ".png";
+                // 직접 넣은 그림(다른 경로)은 건드리지 않는다
+                if (vis.art != null && AssetDatabase.GetAssetPath(vis.art) != path) continue;
+                var tex = ArtStudio.RenderArt(vis.cardId, vis);
+                if (tex == null) continue;
+                File.WriteAllBytes(path, tex.EncodeToPNG());
+                Object.DestroyImmediate(tex);
+                AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+                var importer = (TextureImporter)AssetImporter.GetAtPath(path);
+                importer.textureType = TextureImporterType.Default;
+                importer.mipmapEnabled = false;
+                importer.wrapMode = TextureWrapMode.Clamp;
+                importer.maxTextureSize = 256;
+                importer.textureCompression = TextureImporterCompression.Compressed;
+                importer.SaveAndReimport();
+                vis.art = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+                EditorUtility.SetDirty(vis);
+                n++;
+            }
+            AssetDatabase.SaveAssets();
+            Debug.Log("왕국의 덱: 카드 그림 " + n + "장 구움 → " + ArtDir);
+        }
+
         [MenuItem("왕국의 덱/씬 만들기")]
         public static void BuildScene()
         {

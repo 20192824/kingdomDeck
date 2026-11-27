@@ -15,7 +15,7 @@ MonoBehaviour:
   cardId: banquet
   frameColor: {r: 0.65882355, g: 0.19607843, b: 0.2901961, a: 1}
   artColor: {r: 0.2901961, g: 0.16470589, b: 0.16470589, a: 1}
-  art: {fileID: 0}
+  art: {fileID: 2800000, guid: 1b84f772625ac6c4298a32dabfe3e3c8, type: 3}
   summonPrefab: {fileID: 6753790350695109006, guid: 1c9b023f68114dd48aa6f81bca275ebc, type: 3}
   sfx: {fileID: 0}
   style: 0
