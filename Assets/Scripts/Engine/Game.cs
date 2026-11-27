@@ -56,6 +56,9 @@ namespace KingdomDeck.Engine
         // 카드 한 장의 효과 진행 중 기억해 둘 값
         int lastTrashedCost = -1;
         bool trashedSomething;
+        string lastDiscardedTop;
+        // 마지막으로 이벤트로 알린 성 체력 (변화가 생기면 피해/수리 이벤트를 낸다)
+        readonly int[] knownHp = new int[2];
         bool started;
 
         public Game(CardDatabase db, GameOptions options = null)
@@ -83,8 +86,17 @@ namespace KingdomDeck.Engine
         public int SiegePower(int p)
         {
             int sum = 0;
-            foreach (var id in Players[p].AllCards) sum += Db[id].Power;
+            foreach (var id in Players[p].AllCards) sum += CardPower(p, id);
             return sum;
+        }
+
+        /// <summary>p가 가진 카드 한 장의 공격력 (의용군처럼 덱 크기에 따라 변하는 카드 포함)</summary>
+        public int CardPower(int p, string id)
+        {
+            var def = Db[id];
+            int power = def.Power;
+            if (def.PowerPerCards > 0) power += Players[p].TotalCards / def.PowerPerCards;
+            return power;
         }
 
         public int TraitorDamage(int p)
@@ -159,6 +171,7 @@ namespace KingdomDeck.Engine
             Emit(new GameEvent { Type = GameEventType.GameStarted, Player = FirstPlayer });
 
             foreach (var p in Players) Draw(p.Index, HandSize);
+            for (int i = 0; i < 2; i++) knownHp[i] = CastleHp(i);
 
             StartTurn(FirstPlayer);
             Advance();
@@ -323,11 +336,9 @@ namespace KingdomDeck.Engine
             p.Hand.RemoveAt(handIndex);
             p.InPlay.Add(id);
             Actions--;
-            lastTrashedCost = -1;
-            trashedSomething = false;
             Emit(new GameEvent { Type = GameEventType.CardPlayed, Player = Current, CardId = id, Index = handIndex, From = Zone.Hand, To = Zone.InPlay });
             EmitResources();
-            PushEffects(Current, Db[id].Effects, id);
+            PushPlay(Current, id, false);
         }
 
         void PlayTreasure(int handIndex)
@@ -445,15 +456,10 @@ namespace KingdomDeck.Engine
             }
             Emit(new GameEvent { Type = GameEventType.CardGained, Player = player, CardId = id, From = Zone.Supply, To = to, Value = supply[id] });
 
-            var def = Db[id];
-            if (def.Power > 0)
-            {
-                int target = Opponent(player);
-                Emit(new GameEvent { Type = GameEventType.SiegeAttack, Player = player, CardId = id, Amount = def.Power });
-                Emit(new GameEvent { Type = GameEventType.CastleDamaged, Player = target, CardId = id, Amount = def.Power, Value = CastleHp(target) });
-            }
-            if (def.SelfDamage > 0)
-                Emit(new GameEvent { Type = GameEventType.CastleDamaged, Player = player, CardId = id, Amount = def.SelfDamage, Value = CastleHp(player) });
+            int power = CardPower(player, id);
+            if (Db[id].Is(CardType.Siege) && power > 0)
+                Emit(new GameEvent { Type = GameEventType.SiegeAttack, Player = player, CardId = id, Amount = power });
+            SyncHp(id);
             CheckInstantEnd();
         }
 
@@ -464,14 +470,29 @@ namespace KingdomDeck.Engine
             p.Hand.RemoveAt(handIndex);
             Trash.Add(id);
             Emit(new GameEvent { Type = GameEventType.CardTrashed, Player = player, CardId = id, Index = handIndex, From = Zone.Hand, To = Zone.Trash });
-            var def = Db[id];
-            if (def.Power > 0)
+            SyncHp(id);
+        }
+
+        /// <summary>
+        /// 카드를 얻거나 폐기한 뒤 호출. 성 체력이 바뀌었으면 피해(CastleDamaged)/수리(CastleRepaired) 이벤트를 낸다.
+        /// (병기 획득·폐기, 배신자, 의용군처럼 덱 크기에 따라 변하는 공격력까지 한 곳에서 처리)
+        /// </summary>
+        void SyncHp(string causeCard)
+        {
+            // 공격받는 쪽을 먼저 알린다 (내가 얻은 카드 → 상대 성)
+            for (int k = 0; k < 2; k++)
             {
-                int target = Opponent(player);
-                Emit(new GameEvent { Type = GameEventType.CastleRepaired, Player = target, CardId = id, Amount = def.Power, Value = CastleHp(target) });
+                int p = k;
+                int now = CastleHp(p);
+                int diff = now - knownHp[p];
+                if (diff == 0) continue;
+                knownHp[p] = now;
+                Emit(new GameEvent
+                {
+                    Type = diff < 0 ? GameEventType.CastleDamaged : GameEventType.CastleRepaired,
+                    Player = p, CardId = causeCard, Amount = Math.Abs(diff), Value = now,
+                });
             }
-            if (def.SelfDamage > 0)
-                Emit(new GameEvent { Type = GameEventType.CastleRepaired, Player = player, CardId = id, Amount = def.SelfDamage, Value = CastleHp(player) });
         }
 
         void DiscardFromHand(int player, int handIndex)
@@ -493,6 +514,7 @@ namespace KingdomDeck.Engine
             var p = Players[player];
             p.Hand.Clear();
             p.Hand.AddRange(cards);
+            DebugResyncHp();
             if (player == Current && !IsOver && awaiting == null && work.Count == 0)
             {
                 Pending = null;
@@ -508,6 +530,13 @@ namespace KingdomDeck.Engine
             var p = Players[player];
             p.Deck.Clear();
             for (int i = topFirst.Length - 1; i >= 0; i--) p.Deck.Add(topFirst[i]);
+            DebugResyncHp();
+        }
+
+        /// <summary>테스트용: 카드 목록을 직접 바꾼 뒤, 이후 피해/수리 이벤트가 그 변화까지 섞지 않도록 기준 체력을 다시 잡는다.</summary>
+        public void DebugResyncHp()
+        {
+            for (int i = 0; i < 2; i++) knownHp[i] = CastleHp(i);
         }
 
         /// <summary>테스트용: 공급처 수량을 바꾼다.</summary>
@@ -558,6 +587,8 @@ namespace KingdomDeck.Engine
                 {
                     Hand = p.Hand.ToArray(),
                     InPlay = p.InPlay.ToArray(),
+                    Revealed = p.Revealed.ToArray(),
+                    RevealedPrivate = p.RevealedPrivate,
                     DeckCount = p.Deck.Count,
                     DiscardCount = p.Discard.Count,
                     TopDiscard = p.Discard.Count > 0 ? p.Discard[p.Discard.Count - 1] : null,
@@ -588,11 +619,18 @@ namespace KingdomDeck.Engine
                     }
                 case GameEventType.CardDrawn: return who + ": 카드 1장 뽑음";
                 case GameEventType.Shuffled: return who + ": 버림 더미 " + e.Amount + "장을 섞어 새 덱으로";
-                case GameEventType.CardPlayed: return who + ": [" + Name(e.CardId) + "] 사용";
+                case GameEventType.CardPlayed:
+                    if (e.From == Zone.InPlay) return who + ": [" + Name(e.CardId) + "] 한 번 더 사용";
+                    if (e.From == Zone.Discard) return who + ": 버린 [" + Name(e.CardId) + "] 바로 사용";
+                    return who + ": [" + Name(e.CardId) + "] 사용";
+                case GameEventType.CardRevealed:
+                    return e.Private ? who + ": 덱 위 카드 1장 확인" : who + ": 덱 위 [" + Name(e.CardId) + "] 공개";
+                case GameEventType.CardReturned:
+                    return who + ": 카드 1장을 덱 위로 되돌림";
                 case GameEventType.CardBought: return who + ": [" + Name(e.CardId) + "] 구매 (" + e.Amount + "코인)";
                 case GameEventType.CardGained: return who + ": [" + Name(e.CardId) + "] 획득" + (e.To == Zone.Hand ? " (손으로)" : "");
                 case GameEventType.CardTrashed: return who + ": [" + Name(e.CardId) + "] 폐기";
-                case GameEventType.CardDiscarded: return who + ": [" + Name(e.CardId) + "] 버림";
+                case GameEventType.CardDiscarded: return who + ": " + (e.From == Zone.Deck ? "덱 맨 위 " : "") + "[" + Name(e.CardId) + "] 버림";
                 case GameEventType.ResourcesChanged: return who + ": 행동 " + Actions + " / 구매 " + Buys + " / 코인 " + Coins;
                 case GameEventType.SiegeAttack: return who + "의 [" + Name(e.CardId) + "] 출격! 공격력 " + e.Amount;
                 case GameEventType.CastleDamaged: return who + "의 성 피해 -" + e.Amount + " (체력 " + e.Value + ")";

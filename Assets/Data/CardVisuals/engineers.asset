@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 72d4a23cd1d87034cafbfc4e2fe3b68c, type: 3}
+  m_Name: engineers
+  m_EditorClassIdentifier: KingdomDeck.Presentation::KingdomDeck.Presentation.CardVisual
+  cardId: engineers
+  frameColor: {r: 0.5411765, g: 0.4392157, b: 0.2509804, a: 1}
+  artColor: {r: 0.2901961, g: 0.22745098, b: 0.14901961, a: 1}
+  art: {fileID: 0}
+  summonPrefab: {fileID: 7956142161925621404, guid: c7f9bcf17bfd7cd4cae1fd63f90fb8f5, type: 3}
+  sfx: {fileID: 0}
+  style: 0
+  summonScale: 1
+  duration: 0.9
+  note: "\uACF5\uBCD1\uC774 \uAE30\uC911\uAE30\uB85C \uB2E4\uC2DC \uC9D3\uAE30"

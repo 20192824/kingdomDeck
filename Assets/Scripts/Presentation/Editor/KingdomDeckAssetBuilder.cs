@@ -73,6 +73,35 @@ namespace KingdomDeck.Presentation.EditorTools
             Debug.Log("왕국의 덱: 카드 연출 " + library.visuals.Count + "개, 소환 프리팹 생성 완료");
         }
 
+        /// <summary>
+        /// 모든 소환 프리팹을 SummonFactory 코드로 다시 만들어 같은 경로에 덮어쓴다 (GUID 유지 → CardVisual 연결 그대로).
+        /// 임시 모델 코드를 고친 뒤 쓴다. 직접 손본 프리팹이 있으면 덮어써지니 주의.
+        /// </summary>
+        [MenuItem("왕국의 덱/소환 프리팹 다시 만들기")]
+        public static void RebuildSummonPrefabs()
+        {
+            var db = CardDatabase.FromJson(File.ReadAllText(CardsJson));
+            EnsureDir(PrefabDir);
+            EnsureDir(MatDir);
+            var savedMats = new Dictionary<Material, Material>();
+            int n = 0;
+            foreach (var card in db.All)
+            {
+                string pPath = PrefabDir + "/Summon_" + card.Id + ".prefab";
+                var go = SummonFactory.Build(card.Id);
+                go.name = "Summon_" + card.Id;
+                PersistMaterials(go, savedMats);
+                PersistMeshes(go);
+                var prefab = PrefabUtility.SaveAsPrefabAsset(go, pPath);
+                Object.DestroyImmediate(go);
+                var vis = AssetDatabase.LoadAssetAtPath<CardVisual>(VisualDir + "/" + card.Id + ".asset");
+                if (vis != null && vis.summonPrefab == null) { vis.summonPrefab = prefab; EditorUtility.SetDirty(vis); }
+                n++;
+            }
+            AssetDatabase.SaveAssets();
+            Debug.Log("왕국의 덱: 소환 프리팹 " + n + "개 다시 만듦");
+        }
+
         static void PersistMaterials(GameObject go, Dictionary<Material, Material> saved)
         {
             foreach (var r in go.GetComponentsInChildren<Renderer>(true))

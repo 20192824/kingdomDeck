@@ -126,7 +126,8 @@ namespace KingdomDeck.Presentation
             tile.nameText = UiKit.Text("Name", bg.transform, def.Name, 18, Palette.Text, TextAnchor.UpperLeft, FontStyle.Bold);
             tile.nameText.rectTransform.Place(new Vector2(0, 0), new Vector2(1, 1), new Vector2(136, 4), new Vector2(-56, -6));
             tile.nameText.Shadowed(1.2f);
-            string sub = def.TypeName + (def.Power > 0 ? "  공격력 " + def.Power : def.Coins > 0 ? "  +" + def.Coins + "코인" : "");
+            string sub = def.TypeName + (def.PowerPerCards > 0 ? "  덱 " + def.PowerPerCards + "장당 1"
+                : def.Power > 0 ? "  공격력 " + def.Power : def.Coins > 0 ? "  +" + def.Coins + "코인" : "");
             var type = UiKit.Text("Type", bg.transform, sub, 12, Palette.TextDim, TextAnchor.LowerLeft);
             type.rectTransform.Place(new Vector2(0, 0), new Vector2(1, 1), new Vector2(136, 5), new Vector2(-56, -4));
 

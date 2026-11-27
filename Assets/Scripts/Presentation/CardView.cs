@@ -101,7 +101,7 @@ namespace KingdomDeck.Presentation
             // 효과 글
             string body = def.Text;
             if (def.Is(CardType.Treasure)) body = "";
-            if (def.Is(CardType.Siege)) body = "구매하는 순간\n상대 성을 공격!";
+            if (def.Is(CardType.Siege)) body = def.PowerPerCards > 0 ? "덱이 커질수록\n강해지는 부대" : "구매하는 순간\n상대 성을 공격!";
             if (def.Is(CardType.Traitor)) body = "덱에 있는 동안\n성벽을 무너뜨린다";
             var bodyText = UiKit.Text("Body", rt, body, body.Length > 30 ? 11 : 13, Palette.Hex("#3a2a1a"), TextAnchor.MiddleCenter);
             float bottom = def.Is(CardType.Siege) || def.Is(CardType.Traitor) ? 40 : 8;
@@ -120,7 +120,9 @@ namespace KingdomDeck.Presentation
             {
                 var badge = UiKit.Image("Power", rt, Palette.Hex("#8c1c1c"), UiKit.RoundedSmall);
                 badge.rectTransform.At(new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, 10), new Vector2(96, 28));
-                var v = UiKit.Text("Value", badge.transform, "공격력 " + def.Power, 16, Color.white, TextAnchor.MiddleCenter, FontStyle.Bold);
+                string label = def.PowerPerCards > 0 ? def.PowerPerCards + "장당 공격력 1" : "공격력 " + def.Power;
+                if (def.PowerPerCards > 0) badge.rectTransform.sizeDelta = new Vector2(128, 28);
+                var v = UiKit.Text("Value", badge.transform, label, def.PowerPerCards > 0 ? 14 : 16, Color.white, TextAnchor.MiddleCenter, FontStyle.Bold);
                 v.rectTransform.Fill();
             }
             if (def.Is(CardType.Traitor))

@@ -74,6 +74,14 @@ namespace KingdomDeck.Presentation
             { "mine",      new Def("#6a5a4a", "#2a2420", SummonStyle.Appear, "광부가 원석을 캐냄") },
             { "witch",     new Def("#5e3a7a", "#24183a", SummonStyle.FlyToEnemy, "마녀가 날아가 저주를 던짐", 1f, 1.4f) },
             { "banquet",   new Def("#a8324a", "#4a2a2a", SummonStyle.Appear, "연회 식탁") },
+            { "warcouncil",   new Def("#4a6a8a", "#2a3a4a", SummonStyle.Appear, "지도 펼친 작전 탁자") },
+            { "attendant",    new Def("#7a8a4a", "#3a4a2a", SummonStyle.Appear, "나팔 부는 시종") },
+            { "engineers",    new Def("#8a7040", "#4a3a26", SummonStyle.Appear, "공병이 기중기로 다시 짓기") },
+            { "moneychanger", new Def("#b09040", "#4a3a1a", SummonStyle.Appear, "저울과 동전 더미") },
+            { "decree",       new Def("#7a3a8a", "#2a1a3a", SummonStyle.Appear, "왕좌와 왕관") },
+            { "volunteers",   new Def("#8a5a2a", "#3a4a2a", SummonStyle.FlyToEnemy, "쇠스랑 든 농민 부대가 진격", 1f, 1.4f) },
+            { "raiders",      new Def("#6a3020", "#2a1a14", SummonStyle.FlyToEnemy, "약탈대가 상대 성으로 돌격", 1f, 1.3f) },
+            { "watchtower",   new Def("#5a6a7a", "#2a3440", SummonStyle.Appear, "망루 위 파수꾼") },
         };
 
         public static CardVisual Create(string id)

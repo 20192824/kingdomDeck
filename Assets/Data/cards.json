@@ -59,6 +59,47 @@
 
     { "id": "banquet", "name": "왕실 연회장", "types": ["Action"], "cost": 5,
       "text": "+2 카드\n+1 구매\n이번 턴 다음 구매 비용 -1",
-      "effects": [ { "op": "drawCards", "n": 2 }, { "op": "addBuys", "n": 1 }, { "op": "costReduction", "n": 1 } ] }
+      "effects": [ { "op": "drawCards", "n": 2 }, { "op": "addBuys", "n": 1 }, { "op": "costReduction", "n": 1 } ] },
+
+    { "id": "warcouncil", "name": "작전 회의", "types": ["Action"], "cost": 2,
+      "text": "+1 행동\n손에서 원하는 만큼 버리고, 버린 만큼 뽑는다",
+      "effects": [ { "op": "addActions", "n": 1 },
+                   { "op": "discardAndDraw", "reason": "버리고 같은 수만큼 새로 뽑을 카드" } ] },
+
+    { "id": "attendant", "name": "시종", "types": ["Action"], "cost": 3,
+      "text": "+2 코인\n덱 맨 위 카드를 버린다. 행동 카드면 바로 사용할 수 있다",
+      "effects": [ { "op": "addCoins", "n": 2 },
+                   { "op": "discardTop", "n": 1 },
+                   { "op": "mayPlayDiscarded", "filter": "Action" } ] },
+
+    { "id": "engineers", "name": "공병대", "types": ["Action"], "cost": 4,
+      "text": "손의 카드 1장을 폐기하고, 그보다 비용이 2 이하 더 비싼 카드를 획득한다",
+      "effects": [ { "op": "trashFromHand", "min": 1, "max": 1, "reason": "개조할 카드 (폐기)" },
+                   { "op": "gainCard", "costUpToTrashedPlus": 2, "to": "discard", "ifTrashed": true, "reason": "획득할 카드 (폐기한 카드 비용 +2 이하)" } ] },
+
+    { "id": "moneychanger", "name": "환전상", "types": ["Action"], "cost": 4,
+      "text": "손의 동화 1장을 폐기하면 +3 코인",
+      "effects": [ { "op": "trashFromHand", "min": 0, "max": 1, "card": "copper", "reason": "폐기할 동화 (+3 코인)" },
+                   { "op": "addCoins", "n": 3, "ifTrashed": true } ] },
+
+    { "id": "decree", "name": "왕의 칙령", "types": ["Action"], "cost": 4,
+      "text": "손의 행동 카드 1장을 두 번 사용한다",
+      "effects": [ { "op": "playActionTimes", "n": 2, "reason": "두 번 사용할 행동 카드" } ] },
+
+    { "id": "volunteers", "name": "의용군", "types": ["Siege"], "cost": 4, "powerPerCards": 10, "supply": 8,
+      "text": "내 덱 10장당 공격력 1\n(덱이 커질수록 강해진다)" },
+
+    { "id": "raiders", "name": "약탈대", "types": ["Action", "Attack"], "cost": 5,
+      "text": "금화 1장을 획득한다\n상대는 덱 위 2장을 공개해 동화가 아닌 재화 1장을 폐기하고 나머지는 버린다",
+      "effects": [ { "op": "gainCard", "card": "gold", "to": "discard" },
+                   { "op": "attack", "effects": [ { "op": "revealTopTrash", "n": 2, "filter": "Treasure", "exclude": "copper" } ] } ] },
+
+    { "id": "watchtower", "name": "망루", "types": ["Action"], "cost": 5,
+      "text": "+1 카드\n+1 행동\n덱 위 2장을 보고 원하는 만큼 폐기·버리고, 나머지는 원하는 순서로 되돌린다",
+      "effects": [ { "op": "drawCards", "n": 1 }, { "op": "addActions", "n": 1 },
+                   { "op": "lookAtTop", "n": 2 },
+                   { "op": "trashFromRevealed", "reason": "폐기할 카드 (망루로 본 카드)" },
+                   { "op": "discardFromRevealed", "reason": "버릴 카드 (망루로 본 카드)" },
+                   { "op": "returnRevealed", "reason": "덱 맨 위에 둘 카드" } ] }
   ]
 }

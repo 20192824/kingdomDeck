@@ -2,7 +2,8 @@ using System.Collections.Generic;
 
 namespace KingdomDeck.Engine
 {
-    public enum Zone { Deck, Hand, Discard, InPlay, Trash, Supply }
+    /// <summary>Revealed = 덱에서 꺼내 공개하거나 확인 중인 카드 (망루, 약탈대)</summary>
+    public enum Zone { Deck, Hand, Discard, InPlay, Trash, Supply, Revealed }
 
     public enum Phase { Setup, Action, Buy, Cleanup, GameOver }
 
@@ -26,6 +27,10 @@ namespace KingdomDeck.Engine
         CastleRepaired,
         AttackBlocked,
         GameEnded,
+        /// <summary>덱에서 카드를 꺼내 공개/확인 (Private면 본인만 봄)</summary>
+        CardRevealed,
+        /// <summary>공개한 카드를 덱 위로 되돌림</summary>
+        CardReturned,
     }
 
     /// <summary>
@@ -47,6 +52,8 @@ namespace KingdomDeck.Engine
         /// <summary>손패 위치 등 (해당될 때)</summary>
         public int Index = -1;
         public Phase Phase;
+        /// <summary>본인만 볼 수 있는 정보 (상대 화면/로그에는 카드 이름을 숨김)</summary>
+        public bool Private;
         public string Text;
         public Snapshot Snap;
 
@@ -57,6 +64,8 @@ namespace KingdomDeck.Engine
     {
         public string[] Hand;
         public string[] InPlay;
+        public string[] Revealed;
+        public bool RevealedPrivate;
         public int DeckCount;
         public int DiscardCount;
         public string TopDiscard;
@@ -104,7 +113,9 @@ namespace KingdomDeck.Engine
         public string Reason;
         /// <summary>이 선택을 만든 카드 ID</summary>
         public string SourceCard;
-        /// <summary>ChooseCards: 고를 수 있는 손패 위치</summary>
+        /// <summary>이 선택을 만든 효과 블록 (trashFromHand, discardAndDraw ...)</summary>
+        public string Op;
+        /// <summary>ChooseCards: 고를 수 있는 위치 (From이 Hand면 손패, Revealed면 공개한 카드)</summary>
         public List<int> CardChoices = new List<int>();
         /// <summary>ChooseSupply: 고를 수 있는 공급처 카드 ID</summary>
         public List<string> SupplyChoices = new List<string>();
@@ -193,6 +204,9 @@ namespace KingdomDeck.Engine
         public readonly List<string> Hand = new List<string>();
         public readonly List<string> Discard = new List<string>();
         public readonly List<string> InPlay = new List<string>();
+        /// <summary>덱에서 꺼내 확인 중인 카드 (아직 내 카드)</summary>
+        public readonly List<string> Revealed = new List<string>();
+        public bool RevealedPrivate;
         public int TurnsTaken;
 
         public IEnumerable<string> AllCards
@@ -203,6 +217,7 @@ namespace KingdomDeck.Engine
                 foreach (var c in Hand) yield return c;
                 foreach (var c in Discard) yield return c;
                 foreach (var c in InPlay) yield return c;
+                foreach (var c in Revealed) yield return c;
             }
         }
 
@@ -213,7 +228,7 @@ namespace KingdomDeck.Engine
             return n;
         }
 
-        public int TotalCards => Deck.Count + Hand.Count + Discard.Count + InPlay.Count;
+        public int TotalCards => Deck.Count + Hand.Count + Discard.Count + InPlay.Count + Revealed.Count;
     }
 
     public sealed class GameOptions

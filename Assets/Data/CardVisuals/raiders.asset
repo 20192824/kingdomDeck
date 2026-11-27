@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 72d4a23cd1d87034cafbfc4e2fe3b68c, type: 3}
+  m_Name: raiders
+  m_EditorClassIdentifier: KingdomDeck.Presentation::KingdomDeck.Presentation.CardVisual
+  cardId: raiders
+  frameColor: {r: 0.41568628, g: 0.1882353, b: 0.1254902, a: 1}
+  artColor: {r: 0.16470589, g: 0.101960786, b: 0.078431375, a: 1}
+  art: {fileID: 0}
+  summonPrefab: {fileID: 7599961828343862383, guid: a8732b7cdcd3bf2419112941a7e3b246, type: 3}
+  sfx: {fileID: 0}
+  style: 5
+  summonScale: 1
+  duration: 1.3
+  note: "\uC57D\uD0C8\uB300\uAC00 \uC0C1\uB300 \uC131\uC73C\uB85C \uB3CC\uACA9"

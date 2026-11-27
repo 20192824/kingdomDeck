@@ -29,10 +29,16 @@ namespace KingdomDeck.AI
         // 행동 카드 우선순위 (높을수록 먼저)
         static readonly Dictionary<string, int> ActionPriority = new Dictionary<string, int>
         {
-            { "village", 100 }, { "market", 95 }, { "monastery", 90 },
-            { "witch", 60 }, { "banquet", 55 }, { "smithy", 50 }, { "mercenary", 45 },
+            { "village", 100 }, { "decree", 98 }, { "market", 95 }, { "watchtower", 93 }, { "warcouncil", 91 }, { "monastery", 90 },
+            { "witch", 60 }, { "raiders", 58 }, { "banquet", 55 }, { "smithy", 50 }, { "mercenary", 45 }, { "moneychanger", 44 },
+            { "attendant", 42 }, { "engineers", 41 },
             { "mine", 40 }, { "guild", 38 }, { "wall", 35 }, { "workshop", 30 }, { "altar", 20 },
         };
+
+        static int Priority(string id) => ActionPriority.TryGetValue(id, out int pr) ? pr : 10;
+
+        /// <summary>쓸모없는 카드 (배신자, 병기)</summary>
+        static bool IsJunk(Game g, string id) => g.Card(id).Is(CardType.Traitor) || g.Card(id).Is(CardType.Siege);
 
         public Command Decide(Game g, PendingDecision d)
         {
@@ -59,10 +65,14 @@ namespace KingdomDeck.AI
             {
                 if (!g.CanPlay(d.Player, i)) continue;
                 string id = hand[i];
-                int score = ActionPriority.TryGetValue(id, out int pr) ? pr : 10;
+                int score = Priority(id);
                 // 쓸모없는 상황이면 건너뛴다
                 if (id == "mine" && !hand.Any(h => h == "copper" || h == "silver")) continue;
                 if (id == "altar" && ChooseTrash(g, d.Player, hand, i, 4).Count == 0) continue;
+                if (id == "moneychanger" && !hand.Contains("copper")) continue;
+                if (id == "warcouncil" && !hand.Where((h, k) => k != i).Any(h => IsJunk(g, h))) continue;
+                if (id == "decree" && !hand.Where((h, k) => k != i).Any(h => g.Card(h).Is(CardType.Action))) continue;
+                if (id == "engineers" && RemodelScore(g, d.Player, hand, i).score < 30) continue;
                 // 행동이 1개 남았으면 행동 +를 주는 카드를 먼저
                 if (score > bestScore) { best = i; bestScore = score; }
             }
@@ -132,8 +142,8 @@ namespace KingdomDeck.AI
 
             // 1) 성 함락으로 바로 이길 수 있으면 그 병기를 산다
             if (g.Options.InstantCastleEnd)
-                foreach (var id in new[] { "archers", "catapult", "dragon" })
-                    if (ok(id) && oppHp - g.Card(id).Power <= 0 && myHp > 0) return id;
+                foreach (var id in new[] { "archers", "volunteers", "catapult", "dragon" })
+                    if (ok(id) && oppHp - PowerIfBought(g, me, id) <= 0 && myHp > 0) return id;
 
             // 2) 3더미 종료가 임박했고 이기는 중이면 마지막 더미를 비워서 끝낸다
             if (g.EmptyPiles == 2)
@@ -141,7 +151,7 @@ namespace KingdomDeck.AI
                 foreach (var id in g.SupplyOrder)
                     if (g.SupplyCount(id) == 1 && ok(id))
                     {
-                        int gain = g.Card(id).Power; // 병기면 차이가 더 벌어진다
+                        int gain = PowerIfBought(g, me, id); // 병기면 차이가 더 벌어진다
                         if ((myHp - (oppHp - gain)) > 0) return id;
                     }
             }
@@ -166,6 +176,7 @@ namespace KingdomDeck.AI
             }
             if (coins >= 5)
             {
+                if (lateGame && ok("volunteers") && PowerIfBought(g, me, "volunteers") > 3) return "volunteers";
                 if (lateGame && ok("catapult")) return "catapult";
                 if (ok("witch") && witches < 2 && g.SupplyCount("traitor") > 2) return "witch";
                 if (ok("market") && terminals >= 2) return "market";
@@ -174,6 +185,8 @@ namespace KingdomDeck.AI
             }
             if (coins >= 4)
             {
+                // 덱이 크면 의용군(10장당 1)이 투석기만큼 세다
+                if (lateGame && ok("volunteers") && PowerIfBought(g, me, "volunteers") >= 3) return "volunteers";
                 if (endgame && ok("archers") && coins == 4 && dragons <= 2) return "archers";
                 bool witchAvailable = g.InSupply("witch") && g.SupplyCount("witch") > 0;
                 if (witches == 0 && !witchAvailable && ok("smithy") && p.Count("smithy") < 1 + deck / 14) return "smithy";
@@ -195,6 +208,21 @@ namespace KingdomDeck.AI
             return null;
         }
 
+        /// <summary>이 카드를 사면 더해지는 공격력 (의용군은 사고 난 뒤 덱 크기로 계산)</summary>
+        static int PowerIfBought(Game g, int me, string id)
+        {
+            var def = g.Card(id);
+            int power = def.Power;
+            if (def.PowerPerCards > 0)
+            {
+                int after = g.Players[me].TotalCards + 1;
+                int owned = g.Players[me].Count(id);
+                // 새 의용군 자신 + 이미 가진 의용군들이 10장 단위를 넘어 늘어나는 몫
+                power += after / def.PowerPerCards + owned * (after / def.PowerPerCards - (after - 1) / def.PowerPerCards);
+            }
+            return power;
+        }
+
         static bool OpponentHasAttack(Game g, int opp) => g.Players[opp].AllCards.Any(id => g.Card(id).Is(CardType.Attack));
 
         static bool GivesActions(Game g, string id) => g.Card(id).Effects.Any(e => e.Op == "addActions");
@@ -207,14 +235,48 @@ namespace KingdomDeck.AI
 
         Command DecideCards(Game g, PendingDecision d)
         {
-            var hand = g.Players[d.Player].Hand;
+            var me = g.Players[d.Player];
+            // 공개한 카드에서 고를 때는 그 목록, 아니면 손패
+            var hand = d.From == Zone.Revealed ? me.Revealed : me.Hand;
             List<int> pick;
-            if (d.SourceCard == "altar")
-                pick = ChooseTrash(g, d.Player, hand, -1, d.Max);
-            else if (d.SourceCard == "mine")
-                pick = ChooseMineTrash(g, hand, d.CardChoices);
-            else
-                pick = ChooseDiscard(g, hand, d.CardChoices, d.Min);
+            switch (d.Op)
+            {
+                case "trashFromHand":
+                    if (d.SourceCard == "altar") pick = ChooseTrash(g, d.Player, hand, -1, d.Max);
+                    else if (d.SourceCard == "mine") pick = ChooseMineTrash(g, hand, d.CardChoices);
+                    else if (d.SourceCard == "moneychanger") pick = d.CardChoices.Take(1).ToList();
+                    else if (d.SourceCard == "engineers") pick = new List<int> { RemodelScore(g, d.Player, hand, -1).index };
+                    else pick = ChooseDiscard(g, hand, d.CardChoices, d.Min);
+                    break;
+                case "discardAndDraw":
+                    // 쓸모없는 카드(배신자, 병기)만 버리고 새로 뽑는다
+                    pick = d.CardChoices.Where(i => IsJunk(g, hand[i])).ToList();
+                    break;
+                case "playActionTimes":
+                {
+                    // 두 번 쓰면 가장 좋은 카드 (드로우·공격 카드 우선)
+                    int best = -1;
+                    foreach (int i in d.CardChoices)
+                        if (best < 0 || DoublePlayValue(hand[i]) > DoublePlayValue(hand[best])) best = i;
+                    pick = best >= 0 ? new List<int> { best } : new List<int>();
+                    break;
+                }
+                case "trashFromRevealed":
+                {
+                    int treasure = TreasureValue(g, me);
+                    pick = d.CardChoices.Where(i => hand[i] == "traitor" || (Level != Difficulty.Easy && hand[i] == "copper" && treasure > 9)).ToList();
+                    break;
+                }
+                case "discardFromRevealed":
+                    pick = d.CardChoices.Where(i => g.Card(hand[i]).Is(CardType.Siege) || hand[i] == "copper").ToList();
+                    break;
+                case "returnRevealed":
+                    pick = new List<int> { d.CardChoices.OrderByDescending(i => KeepValue(g, hand[i])).First() };
+                    break;
+                default:
+                    pick = ChooseDiscard(g, hand, d.CardChoices, d.Min);
+                    break;
+            }
 
             // 최소/최대 맞추기
             pick = pick.Where(i => d.CardChoices.Contains(i)).Distinct().Take(d.Max).ToList();
@@ -253,6 +315,43 @@ namespace KingdomDeck.AI
                 else if (id == "archers" && early && Level == Difficulty.Hard && g.SupplyCount("dragon") >= 7) result.Add(i);
             }
             return result;
+        }
+
+        static int DoublePlayValue(string id)
+        {
+            switch (id)
+            {
+                case "witch": return 100;
+                case "smithy": return 90;
+                case "raiders": return 88;
+                case "monastery": case "market": case "banquet": return 80;
+                case "guild": case "mercenary": return 70;
+                case "village": return 50;
+                default: return Priority(id) / 2;
+            }
+        }
+
+        /// <summary>공병대로 개조할 카드와 그 가치. 배신자 → (후반) 금화→드래곤 → (초반) 궁수대 → 동화</summary>
+        (int index, int score) RemodelScore(Game g, int me, List<string> hand, int skipIndex)
+        {
+            int dragons = g.SupplyCount("dragon");
+            bool late = dragons <= 4;
+            bool early = g.Players[me].TurnsTaken < 8;
+            int best = -1, bestScore = 0;
+            for (int i = 0; i < hand.Count; i++)
+            {
+                if (i == skipIndex) continue;
+                string id = hand[i];
+                int s;
+                if (id == "traitor") s = 100;
+                else if (id == "gold" && late && dragons > 0) s = 90;
+                else if (id == "silver" && late && g.SupplyCount("catapult") > 0) s = 60;
+                else if (id == "archers" && early && Level == Difficulty.Hard) s = 50;
+                else if (id == "copper") s = late ? 35 : 30;
+                else s = 5;
+                if (best < 0 || s > bestScore) { best = i; bestScore = s; }
+            }
+            return (Math.Max(0, best), bestScore);
         }
 
         static List<int> ChooseMineTrash(Game g, List<string> hand, List<int> choices)

@@ -27,6 +27,8 @@ namespace KingdomDeck.Engine
         public int Max;
         /// <summary>gainCard: 정해진 카드 ID (예: 배신자)</summary>
         public string CardId;
+        /// <summary>이 카드 ID는 대상에서 뺀다 (예: 동화 제외)</summary>
+        public string Exclude;
         /// <summary>gainCard: 비용 상한 (-1 = 없음)</summary>
         public int MaxCost = -1;
         /// <summary>gainCard: 방금 폐기한 카드 비용 + X 이하 (-1 = 사용 안 함)</summary>
@@ -51,6 +53,7 @@ namespace KingdomDeck.Engine
                 Min = MiniJson.Int(d, "min"),
                 Max = MiniJson.Int(d, "max"),
                 CardId = MiniJson.Str(d, "card"),
+                Exclude = MiniJson.Str(d, "exclude"),
                 MaxCost = MiniJson.Int(d, "maxCost", -1),
                 CostUpToTrashedPlus = MiniJson.Int(d, "costUpToTrashedPlus", -1),
                 IfTrashed = MiniJson.Bool(d, "ifTrashed"),
@@ -96,6 +99,8 @@ namespace KingdomDeck.Engine
         public int Coins;
         /// <summary>병기 공격력 (= 승점)</summary>
         public int Power;
+        /// <summary>덱 N장당 공격력 1 (0 = 사용 안 함). 실제 공격력은 Game.CardPower로 계산</summary>
+        public int PowerPerCards;
         /// <summary>배신자: 내 성 체력 감소량</summary>
         public int SelfDamage;
         public int Supply = 10;
@@ -145,6 +150,7 @@ namespace KingdomDeck.Engine
                 Cost = MiniJson.Int(d, "cost"),
                 Coins = MiniJson.Int(d, "coins"),
                 Power = MiniJson.Int(d, "power"),
+                PowerPerCards = MiniJson.Int(d, "powerPerCards"),
                 SelfDamage = MiniJson.Int(d, "selfDamage"),
                 Supply = MiniJson.Int(d, "supply", 10),
                 Basic = MiniJson.Bool(d, "basic"),
@@ -208,6 +214,8 @@ namespace KingdomDeck.Engine
         {
             if (e.CardId != null && !db.Contains(e.CardId))
                 throw new FormatException(c.Id + " 효과가 없는 카드를 참조합니다: " + e.CardId);
+            if (e.Exclude != null && !db.Contains(e.Exclude))
+                throw new FormatException(c.Id + " 효과가 없는 카드를 참조합니다: " + e.Exclude);
             foreach (var sub in e.Effects) Validate(db, c, sub);
         }
     }

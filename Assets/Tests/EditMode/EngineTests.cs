@@ -45,12 +45,13 @@ namespace KingdomDeck.Tests
     public class EngineBasicsTests
     {
         [Test]
-        public void CardDatabase_Loads19Cards()
+        public void CardDatabase_Loads27Cards()
         {
             var db = TestUtil.Db;
-            Assert.AreEqual(19, db.All.Count);
+            Assert.AreEqual(27, db.All.Count);
             Assert.AreEqual(7, db.Basics.Count());
-            Assert.AreEqual(12, db.KingdomPool.Count());
+            Assert.AreEqual(20, db.KingdomPool.Count());
+            Assert.AreEqual(10, db["volunteers"].PowerPerCards);
             Assert.AreEqual(6, db["dragon"].Power);
             Assert.AreEqual(46, db["copper"].Supply);
             Assert.IsTrue(db["wall"].BlocksAttacks);

@@ -400,6 +400,19 @@ namespace KingdomDeck.Presentation
                     }
                     break;
 
+                case GameEventType.CardRevealed:
+                    LogEvent(e);
+                    Sfx.Play(Sfx.Card, 0.6f, 1.2f);
+                    if (e.Snap != null) ApplySnapshot(e.Snap);
+                    yield return Anim.Wait(e.Private && e.Player == Ai ? 0.15f : 0.45f);
+                    break;
+
+                case GameEventType.CardReturned:
+                    LogEvent(e);
+                    Sfx.Play(Sfx.Card, 0.5f, 0.9f);
+                    yield return Anim.Wait(0.2f);
+                    break;
+
                 case GameEventType.AttackBlocked:
                     LogEvent(e);
                     StartCoroutine(Banner(e.Player == Me ? "성벽이 공격을 막았다!" : "AI의 성벽이 공격을 막았다!", Palette.Select, 0.9f));
@@ -434,20 +447,7 @@ namespace KingdomDeck.Presentation
             var vis = library.Get(e.CardId);
             CardView ghost;
             Vector2 start;
-            if (e.Player == Me && e.Index >= 0 && e.Index < handCards.Count && handCards[e.Index].CardId == e.CardId)
-            {
-                var src = handCards[e.Index];
-                start = ScreenOf(src.Rt);
-                handCards.RemoveAt(e.Index);
-                Destroy(src.gameObject);
-                LayoutHand(false);
-                ghost = MakeGhost(e.CardId, start, 1f);
-            }
-            else
-            {
-                start = ScreenOf(e.Player == Me ? myInfo : aiHandRow);
-                ghost = MakeGhost(e.CardId, start, 0.5f);
-            }
+            ghost = GhostFor(e, out start);
 
             Sfx.Play(Sfx.Card, 0.7f);
             Vector2 target = ScreenOf(playArea);
@@ -463,7 +463,7 @@ namespace KingdomDeck.Presentation
 
             // 행동 카드: 크게 보여준 뒤 사용한 카드 자리로
             Vector2 center = ScreenOf(fieldRect) + new Vector2(0, -40);
-            yield return MoveGhost(ghost, start, center, e.Player == Me ? 1f : 0.5f, 1.35f, 0.22f);
+            yield return MoveGhost(ghost, start, center, ghost.Rt.localScale.x, 1.35f, 0.22f);
             if (vis.sfx != null) Sfx.Play(vis.sfx);
             if (vis.style == SummonStyle.FlyToEnemy)
                 StartCoroutine(field.FlyToEnemy(e.CardId, e.Player, vis.duration, e.CardId == "witch" ? Palette.Hex("#b050ff") : Palette.Hex("#ff6040")));
@@ -473,6 +473,38 @@ namespace KingdomDeck.Presentation
             yield return MoveGhost(ghost, center, target, 1.35f, 0.55f, 0.18f);
             DestroyGhost(ghost);
             if (vis.style == SummonStyle.FlyToEnemy) yield return Anim.Wait(0.35f * vis.duration);
+        }
+
+        /// <summary>이벤트의 출발 위치에 카드 그림을 만든다 (손패/덱 위 공개 카드는 원래 카드를 치운다)</summary>
+        CardView GhostFor(GameEvent e, out Vector2 start)
+        {
+            if (e.From == Zone.Hand && e.Player == Me && e.Index >= 0 && e.Index < handCards.Count && handCards[e.Index].CardId == e.CardId)
+            {
+                var src = handCards[e.Index];
+                start = ScreenOf(src.Rt);
+                handCards.RemoveAt(e.Index);
+                Destroy(src.gameObject);
+                LayoutHand(false);
+                return MakeGhost(e.CardId, start, 1f);
+            }
+            if (e.From == Zone.Revealed && e.Index >= 0 && e.Index < revealCards.Count && revealCards[e.Index].CardId == e.CardId)
+            {
+                var src = revealCards[e.Index];
+                start = ScreenOf(src.Rt);
+                revealCards.RemoveAt(e.Index);
+                Destroy(src.gameObject);
+                revealKey = "";
+                return MakeGhost(e.CardId, start, 0.95f);
+            }
+            switch (e.From)
+            {
+                case Zone.Deck: start = PileScreenPos(e.Player, true); break;
+                case Zone.Discard: start = PileScreenPos(e.Player, false); break;
+                case Zone.InPlay: start = ScreenOf(playArea); break;
+                case Zone.Revealed: start = ScreenOf(revealRow); break;
+                default: start = e.Player == Me ? ScreenOf(myInfo) : ScreenOf(aiHandRow); break;
+            }
+            return MakeGhost(e.CardId, start, 0.5f);
         }
 
         IEnumerator FlyFromSupply(string cardId, int player, Zone to)
@@ -492,20 +524,7 @@ namespace KingdomDeck.Presentation
         {
             Vector2 start;
             CardView ghost;
-            if (e.Player == Me && e.Index >= 0 && e.Index < handCards.Count && handCards[e.Index].CardId == e.CardId)
-            {
-                var src = handCards[e.Index];
-                start = ScreenOf(src.Rt);
-                handCards.RemoveAt(e.Index);
-                Destroy(src.gameObject);
-                LayoutHand(false);
-                ghost = MakeGhost(e.CardId, start, 1f);
-            }
-            else
-            {
-                start = ScreenOf(aiHandRow);
-                ghost = MakeGhost(e.CardId, start, 0.5f);
-            }
+            ghost = GhostFor(e, out start);
             Vector2 center = ScreenOf(fieldRect) + new Vector2(UnityEngine.Random.Range(-60f, 60f), -20);
             yield return MoveGhost(ghost, start, center, ghost.Rt.localScale.x, 1f, 0.2f);
             Sfx.Play(Sfx.Trash, 0.7f);
@@ -525,21 +544,16 @@ namespace KingdomDeck.Presentation
         {
             Vector2 start;
             CardView ghost;
-            if (e.Player == Me && e.Index >= 0 && e.Index < handCards.Count && handCards[e.Index].CardId == e.CardId)
-            {
-                var src = handCards[e.Index];
-                start = ScreenOf(src.Rt);
-                handCards.RemoveAt(e.Index);
-                Destroy(src.gameObject);
-                LayoutHand(false);
-                ghost = MakeGhost(e.CardId, start, 1f);
-            }
-            else
-            {
-                start = ScreenOf(aiHandRow);
-                ghost = MakeGhost(e.CardId, start, 0.5f);
-            }
+            ghost = GhostFor(e, out start);
             Sfx.Play(Sfx.Card, 0.6f, 0.8f);
+            if (e.From == Zone.Deck)
+            {
+                // 덱 맨 위에서 버린 카드는 무엇인지 보여준 뒤 버림 더미로
+                Vector2 center = ScreenOf(fieldRect) + new Vector2(0, -30);
+                yield return MoveGhost(ghost, start, center, ghost.Rt.localScale.x, 1.1f, 0.2f);
+                yield return Anim.Wait(0.35f);
+                start = center;
+            }
             yield return MoveGhost(ghost, start, PileScreenPos(e.Player, false), ghost.Rt.localScale.x, 0.3f, 0.22f);
             DestroyGhost(ghost);
         }

@@ -178,6 +178,14 @@ namespace KingdomDeck.Presentation
                 case "mine": return Mine();
                 case "witch": return Witch();
                 case "banquet": return Banquet();
+                case "warcouncil": return WarCouncil();
+                case "attendant": return Attendant();
+                case "engineers": return Engineers();
+                case "moneychanger": return MoneyChanger();
+                case "decree": return Decree();
+                case "volunteers": return Volunteers();
+                case "raiders": return Raiders();
+                case "watchtower": return Watchtower();
                 default:
                 {
                     var r = Root("Summon_" + id);
@@ -487,6 +495,170 @@ namespace KingdomDeck.Presentation
             Sph(r, new Vector3(0, 0.6f, 0), new Vector3(0.45f, 0.25f, 0.3f), Mat("#b0602a"));
             Sph(r, new Vector3(-0.35f, 0.55f, 0.05f), Vector3.one * 0.14f, Mat("#d04020"));
             Sph(r, new Vector3(0.35f, 0.55f, 0.05f), Vector3.one * 0.14f, Mat("#80b030"));
+            return r.gameObject;
+        }
+
+        static GameObject WarCouncil()
+        {
+            var r = Root("Summon_WarCouncil");
+            var wood = Mat("#6a4a2a");
+            Cube(r, new Vector3(0, 0.45f, 0), new Vector3(1.4f, 0.08f, 0.9f), wood);
+            foreach (var x in new[] { -0.6f, 0.6f })
+                foreach (var z in new[] { -0.35f, 0.35f })
+                    Cube(r, new Vector3(x, 0.2f, z), new Vector3(0.08f, 0.42f, 0.08f), Mat("#4a301c"));
+            Cube(r, new Vector3(0, 0.5f, 0), new Vector3(1.1f, 0.01f, 0.7f), Mat("#e8d8a8"));
+            Cube(r, new Vector3(-0.15f, 0.51f, 0.05f), new Vector3(0.4f, 0.01f, 0.25f), Mat("#7a9a5a"));
+            Cube(r, new Vector3(0.25f, 0.51f, -0.1f), new Vector3(0.3f, 0.01f, 0.2f), Mat("#6a8ab0"));
+            foreach (var (pos, col) in new[] { (new Vector3(-0.3f, 0.6f, 0.1f), "#4f8fe6"), (new Vector3(0.35f, 0.6f, -0.15f), "#e0533f"), (new Vector3(0.1f, 0.6f, 0.2f), "#e0533f") })
+            {
+                Cyl(r, pos, new Vector3(0.02f, 0.1f, 0.02f), Mat("#3a2a1a"));
+                Cube(r, pos + new Vector3(0.05f, 0.07f, 0), new Vector3(0.1f, 0.06f, 0.01f), Mat(col));
+            }
+            Cyl(r, new Vector3(0.55f, 0.56f, 0.28f), new Vector3(0.06f, 0.06f, 0.06f), Mat("#f0e8d0"));
+            Sph(r, new Vector3(0.55f, 0.65f, 0.28f), Vector3.one * 0.06f, Glow("#ffc040"));
+            return r.gameObject;
+        }
+
+        static GameObject Attendant()
+        {
+            var r = Root("Summon_Attendant");
+            var s = Soldier(r, Vector3.zero, "#4a6aa0", "#e0c040", 1.1f);
+            Cone(s.transform, new Vector3(0.12f, 0.95f, 0.25f), new Vector3(0.12f, 0.5f, 0.12f), Mat("#e0b040", 0.8f, 0.9f), new Vector3(70, 0, 0));
+            Cube(s.transform, new Vector3(-0.2f, 0.55f, 0.1f), new Vector3(0.18f, 0.24f, 0.02f), Mat("#f0e6d0"), new Vector3(0, 0, 10));
+            return r.gameObject;
+        }
+
+        static GameObject Engineers()
+        {
+            var r = Root("Summon_Engineers");
+            var wood = Mat("#7a5230");
+            foreach (var x in new[] { -0.5f, 0.5f })
+                foreach (var z in new[] { -0.3f, 0.3f })
+                    Cube(r, new Vector3(x, 0.6f, z), new Vector3(0.06f, 1.2f, 0.06f), wood);
+            Cube(r, new Vector3(0, 0.9f, 0), new Vector3(1.1f, 0.05f, 0.66f), wood);
+            Cube(r, new Vector3(0, 0.3f, 0), new Vector3(0.9f, 0.6f, 0.5f), Mat("#a7a39a"));
+            var arm = new GameObject("Crane").transform;
+            arm.SetParent(r, false);
+            arm.localPosition = new Vector3(0.5f, 1.2f, 0);
+            Cube(arm, new Vector3(-0.4f, 0.1f, 0), new Vector3(1.0f, 0.06f, 0.06f), wood, new Vector3(0, 0, -10));
+            Cube(arm, new Vector3(-0.85f, -0.15f, 0), new Vector3(0.01f, 0.45f, 0.01f), Mat("#d0c0a0"));
+            Cube(arm, new Vector3(-0.85f, -0.42f, 0), new Vector3(0.22f, 0.16f, 0.22f), Mat("#a7a39a"));
+            arm.gameObject.AddComponent<Swinger>().amplitude = 6f;
+            var s = Soldier(r, new Vector3(0.75f, 0, -0.4f), "#8a6a3a", "#e0c040", 0.85f);
+            var hammer = new GameObject("Hammer").transform;
+            hammer.SetParent(s.transform, false);
+            hammer.localPosition = new Vector3(0.25f, 0.7f, 0.1f);
+            Cube(hammer, new Vector3(0, 0.2f, 0), new Vector3(0.05f, 0.4f, 0.05f), wood);
+            Cube(hammer, new Vector3(0, 0.42f, 0), new Vector3(0.22f, 0.1f, 0.1f), Mat("#808890", 0.7f, 0.8f));
+            hammer.gameObject.AddComponent<Swinger>();
+            return r.gameObject;
+        }
+
+        static GameObject MoneyChanger()
+        {
+            var r = Root("Summon_MoneyChanger");
+            Cube(r, new Vector3(0, 0.4f, 0), new Vector3(1.4f, 0.08f, 0.7f), Mat("#5a3a20"));
+            Cube(r, new Vector3(0, 0.2f, 0), new Vector3(1.2f, 0.36f, 0.5f), Mat("#4a301c"));
+            var brass = Mat("#e0b040", 0.8f, 0.9f);
+            Cyl(r, new Vector3(0, 0.7f, 0), new Vector3(0.04f, 0.3f, 0.04f), brass);
+            var beam = new GameObject("Beam").transform;
+            beam.SetParent(r, false);
+            beam.localPosition = new Vector3(0, 1.0f, 0);
+            Cube(beam, Vector3.zero, new Vector3(0.9f, 0.03f, 0.03f), brass);
+            foreach (var x in new[] { -0.42f, 0.42f })
+            {
+                Cube(beam, new Vector3(x, -0.15f, 0), new Vector3(0.01f, 0.3f, 0.01f), brass);
+                Cyl(beam, new Vector3(x, -0.3f, 0), new Vector3(0.28f, 0.02f, 0.28f), brass);
+            }
+            beam.gameObject.AddComponent<Swinger>().amplitude = 5f;
+            var copper = Mat("#c47a45", 0.8f, 0.9f);
+            var gold = Mat("#f2c744", 0.8f, 0.9f);
+            for (int k = 0; k < 4; k++) Cyl(r, new Vector3(-0.5f, 0.46f + k * 0.05f, 0.15f), new Vector3(0.16f, 0.02f, 0.16f), copper);
+            for (int k = 0; k < 3; k++) Cyl(r, new Vector3(0.5f, 0.46f + k * 0.05f, 0.15f), new Vector3(0.16f, 0.02f, 0.16f), gold);
+            return r.gameObject;
+        }
+
+        static GameObject Decree()
+        {
+            var r = Root("Summon_Decree");
+            var red = Mat("#8a1e2a");
+            var gold = Mat("#e0b040", 0.8f, 0.9f);
+            Cube(r, new Vector3(0, 0.1f, 0), new Vector3(1.2f, 0.2f, 1.0f), Mat("#6a5a4a"));
+            Cube(r, new Vector3(0, 0.45f, 0), new Vector3(0.8f, 0.5f, 0.6f), gold);
+            Cube(r, new Vector3(0, 0.72f, 0), new Vector3(0.7f, 0.06f, 0.5f), red);
+            Cube(r, new Vector3(0, 1.2f, 0.27f), new Vector3(0.8f, 1.1f, 0.1f), gold);
+            Cube(r, new Vector3(0, 1.15f, 0.21f), new Vector3(0.6f, 0.85f, 0.03f), red);
+            Sph(r, new Vector3(-0.4f, 1.8f, 0.27f), Vector3.one * 0.14f, gold);
+            Sph(r, new Vector3(0.4f, 1.8f, 0.27f), Vector3.one * 0.14f, gold);
+            foreach (var x in new[] { -0.42f, 0.42f }) Cube(r, new Vector3(x, 0.85f, 0), new Vector3(0.08f, 0.2f, 0.55f), gold);
+            // 왕관
+            var crown = new GameObject("Crown").transform;
+            crown.SetParent(r, false);
+            crown.localPosition = new Vector3(0, 0.8f, -0.05f);
+            Cyl(crown, Vector3.zero, new Vector3(0.32f, 0.06f, 0.32f), gold);
+            for (int k = 0; k < 6; k++)
+            {
+                float a = k * Mathf.PI * 2 / 6;
+                Cone(crown, new Vector3(Mathf.Cos(a) * 0.14f, 0.05f, Mathf.Sin(a) * 0.14f), new Vector3(0.07f, 0.14f, 0.07f), gold);
+            }
+            Sph(crown, new Vector3(0, 0.04f, -0.15f), Vector3.one * 0.06f, Glow("#ff3050"));
+            return r.gameObject;
+        }
+
+        static GameObject Volunteers()
+        {
+            var r = Root("Summon_Volunteers");
+            var wood = Mat("#7a5230");
+            var iron = Mat("#909098", 0.6f, 0.7f);
+            string[] tunics = { "#8a6a3a", "#6a7a3a", "#7a4a2a", "#5a6a4a" };
+            for (int i = 0; i < 4; i++)
+            {
+                var s = Soldier(r, new Vector3((i - 1.5f) * 0.42f, 0, (i % 2) * 0.3f), tunics[i], "#d8c080", 0.85f);
+                // 밀짚모자처럼 넓적하게
+                var hat = s.transform.Find("Cone");
+                if (hat != null) hat.localScale = new Vector3(0.55f, 0.14f, 0.55f);
+                var fork = new GameObject("Pitchfork").transform;
+                fork.SetParent(s.transform, false);
+                fork.localPosition = new Vector3(0.24f, 0.1f, 0.12f);
+                Cube(fork, new Vector3(0, 0.6f, 0), new Vector3(0.035f, 1.2f, 0.035f), wood);
+                for (int t = -1; t <= 1; t++) Cube(fork, new Vector3(t * 0.06f, 1.28f, 0), new Vector3(0.02f, 0.18f, 0.02f), iron);
+                Cube(fork, new Vector3(0, 1.19f, 0), new Vector3(0.15f, 0.02f, 0.02f), iron);
+            }
+            return r.gameObject;
+        }
+
+        static GameObject Raiders()
+        {
+            var r = Root("Summon_Raiders");
+            var s = Soldier(r, Vector3.zero, "#3a2a24", "#6a2a20", 1.15f);
+            Sph(s.transform, new Vector3(-0.3f, 0.65f, -0.15f), new Vector3(0.4f, 0.45f, 0.4f), Mat("#a08050"));
+            Sph(s.transform, new Vector3(-0.3f, 0.92f, -0.15f), Vector3.one * 0.12f, Glow("#ffd040"));
+            var axe = new GameObject("Axe").transform;
+            axe.SetParent(s.transform, false);
+            axe.localPosition = new Vector3(0.28f, 0.5f, 0.12f);
+            Cube(axe, new Vector3(0, 0.25f, 0), new Vector3(0.05f, 0.6f, 0.05f), Mat("#5a3a20"));
+            Cube(axe, new Vector3(0.08f, 0.5f, 0), new Vector3(0.16f, 0.2f, 0.03f), Mat("#c0c4c8", 0.8f, 0.8f));
+            Cube(s.transform, new Vector3(0, 0.98f, 0.12f), new Vector3(0.3f, 0.07f, 0.06f), Mat("#202020"));
+            return r.gameObject;
+        }
+
+        static GameObject Watchtower()
+        {
+            var r = Root("Summon_Watchtower");
+            var wood = Mat("#7a5230");
+            foreach (var x in new[] { -0.35f, 0.35f })
+                foreach (var z in new[] { -0.35f, 0.35f })
+                    Cube(r, new Vector3(x, 0.8f, z), new Vector3(0.09f, 1.6f, 0.09f), wood);
+            Cube(r, new Vector3(0, 0.5f, -0.35f), new Vector3(0.75f, 0.05f, 0.05f), wood, new Vector3(0, 0, 40));
+            Cube(r, new Vector3(0, 0.5f, 0.35f), new Vector3(0.75f, 0.05f, 0.05f), wood, new Vector3(0, 0, -40));
+            Cube(r, new Vector3(0, 1.6f, 0), new Vector3(0.95f, 0.08f, 0.95f), Mat("#8a6034"));
+            foreach (var z in new[] { -0.45f, 0.45f }) Cube(r, new Vector3(0, 1.75f, z), new Vector3(0.95f, 0.22f, 0.05f), Mat("#6a4a2a"));
+            Cone(r, new Vector3(0, 2.35f, 0), new Vector3(1.2f, 0.6f, 1.2f), Mat("#5a6a8a"));
+            foreach (var x in new[] { -0.4f, 0.4f })
+                foreach (var z in new[] { -0.4f, 0.4f })
+                    Cube(r, new Vector3(x, 2.05f, z), new Vector3(0.05f, 0.6f, 0.05f), wood);
+            Soldier(r, new Vector3(0, 1.64f, 0), "#4a5a7a", "#909098", 0.6f);
+            Sph(r, new Vector3(0.3f, 1.95f, -0.3f), Vector3.one * 0.1f, Glow("#ffc040"));
             return r.gameObject;
         }
 

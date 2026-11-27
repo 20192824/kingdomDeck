@@ -290,6 +290,80 @@ namespace KingdomDeck.Presentation
             playArea = pa.rectTransform;
             var lbl = UiKit.Text("Label", pa.transform, "사용한 카드", 13, Palette.TextDim, TextAnchor.UpperLeft);
             lbl.rectTransform.Place(new Vector2(0, 1), new Vector2(1, 1), new Vector2(10, -20), new Vector2(-10, -3));
+
+            // 덱 위에서 꺼낸 카드 (망루로 확인 / 약탈대로 공개) — 가운데에 잠깐 나타난다
+            var rv = UiKit.Panel("RevealRow", fieldRect, Palette.Hex("#120e0a", 0.88f));
+            rv.rectTransform.At(new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0, 10), new Vector2(460, 270));
+            revealRow = rv.rectTransform;
+            revealLabel = UiKit.Text("Label", rv.transform, "", 17, Palette.Gold, TextAnchor.MiddleCenter, FontStyle.Bold);
+            revealLabel.rectTransform.Place(new Vector2(0, 1), new Vector2(1, 1), new Vector2(10, -36), new Vector2(-10, -6));
+            revealLabel.Shadowed();
+            rv.gameObject.SetActive(false);
+        }
+
+        RectTransform revealRow;
+        Text revealLabel;
+        readonly List<CardView> revealCards = new List<CardView>();
+        string revealKey = "";
+
+        void RenderRevealed(Snapshot s)
+        {
+            // 내 카드가 공개 중이면 그쪽을, 아니면 AI 쪽을 보여준다
+            int p = s.Players[Me].Revealed.Length > 0 ? Me : s.Players[Ai].Revealed.Length > 0 ? Ai : -1;
+            if (p < 0)
+            {
+                if (revealRow.gameObject.activeSelf) { foreach (var c in revealCards) Destroy(c.gameObject); revealCards.Clear(); revealKey = ""; revealRow.gameObject.SetActive(false); }
+                return;
+            }
+            var view = s.Players[p];
+            bool hidden = p == Ai && view.RevealedPrivate;
+            string key = p + (hidden ? "h" : "") + ":" + string.Join(",", view.Revealed);
+            revealRow.gameObject.SetActive(true);
+            revealRow.SetAsLastSibling();
+            string owner = p == Me ? "내" : "AI";
+            revealLabel.text = view.RevealedPrivate
+                ? (p == Me ? "덱 위 카드 (나만 볼 수 있음)" : "AI가 덱 위 카드를 확인하는 중")
+                : owner + " 덱 위 카드 공개!";
+            if (key == revealKey) return;
+            revealKey = key;
+            foreach (var c in revealCards) Destroy(c.gameObject);
+            revealCards.Clear();
+            const float scale = 0.95f;
+            int n = view.Revealed.Length;
+            for (int i = 0; i < n; i++)
+            {
+                string id = view.Revealed[i];
+                var cv = CardView.Create(revealRow, hidden ? null : db[id], hidden ? null : library.Get(id), hidden ? null : ArtStudio.Get(id, library), scale);
+                cv.Rt.anchorMin = cv.Rt.anchorMax = new Vector2(0.5f, 0.5f);
+                cv.SetBase(new Vector2((i - (n - 1) / 2f) * (CardView.W * scale + 14), -16), scale, 0, true);
+                cv.HoverScale = 1.3f;
+                cv.HoverLift = 20f;
+                if (p == Me) cv.Clicked += OnRevealClicked;
+                else cv.SetInteractable(false);
+                revealCards.Add(cv);
+            }
+            revealRow.sizeDelta = new Vector2(Mathf.Max(460, n * (CardView.W * scale + 14) + 40), 270);
+        }
+
+        void OnRevealClicked(CardView cv)
+        {
+            if (!HumanReady) return;
+            var d = game.Pending;
+            if (d.Kind != DecisionKind.ChooseCards || d.From != Zone.Revealed) return;
+            int i = revealCards.IndexOf(cv);
+            if (i < 0 || !d.CardChoices.Contains(i)) return;
+            if (selected.Contains(i)) selected.Remove(i);
+            else
+            {
+                if (selected.Count >= d.Max)
+                {
+                    if (d.Max == 1) selected.Clear();
+                    else return;
+                }
+                selected.Add(i);
+            }
+            Sfx.Play(Sfx.Click, 0.5f);
+            RefreshInteractivity();
         }
 
         void BuildHandArea()
@@ -471,6 +545,7 @@ namespace KingdomDeck.Presentation
             myInfoText.text = "<b>덱</b> " + me.DeckCount + "\n<b>버림</b> " + me.DiscardCount + "\n<color=#a8977a>전체 " + me.TotalCards + "장</color>";
             aiInfoText.text = "손패 " + ai.Hand.Length + "  ·  덱 " + ai.DeckCount + "  ·  버림 " + ai.DiscardCount + "  ·  전체 " + ai.TotalCards;
             RenderAiHand(ai.Hand.Length);
+            RenderRevealed(s);
         }
 
         void ApplyTopBar(Snapshot s)
@@ -613,6 +688,7 @@ namespace KingdomDeck.Presentation
         void SetInteractivityOff()
         {
             foreach (var c in handCards) { c.SetHighlight(CardHighlight.None); c.SetDim(false); c.Selected = 0; }
+            foreach (var c in revealCards) { c.SetHighlight(CardHighlight.None); c.Selected = 0; }
             foreach (var t in tiles) t.SetState(CardHighlight.None, false);
             playAllBtn.Interactable = nextBtn.Interactable = endTurnBtn.Interactable = false;
             confirmBtn.SetActive(false);
@@ -658,8 +734,8 @@ namespace KingdomDeck.Presentation
                         if (def.Is(CardType.Treasure)) h = CardHighlight.Playable; else dimmed = true;
                         break;
                     case DecisionKind.ChooseCards:
-                        if (!d.CardChoices.Contains(i)) dimmed = true;
-                        else if (selected.Contains(i)) { h = d.SourceCard == "altar" || d.SourceCard == "mine" ? CardHighlight.Danger : CardHighlight.Selected; cv.Selected = 1; }
+                        if (d.From != Zone.Hand || !d.CardChoices.Contains(i)) dimmed = true;
+                        else if (selected.Contains(i)) { h = IsTrashChoice(d) ? CardHighlight.Danger : CardHighlight.Selected; cv.Selected = 1; }
                         break;
                     default:
                         dimmed = d.Kind == DecisionKind.ChooseSupply;
@@ -667,6 +743,18 @@ namespace KingdomDeck.Presentation
                 }
                 cv.SetHighlight(h);
                 cv.SetDim(dimmed);
+            }
+
+            // 덱 위에서 꺼낸 카드 (망루)
+            bool fromRevealed = d.Kind == DecisionKind.ChooseCards && d.From == Zone.Revealed;
+            for (int i = 0; i < revealCards.Count; i++)
+            {
+                var cv = revealCards[i];
+                bool sel = fromRevealed && selected.Contains(i);
+                cv.Selected = 0;
+                cv.SetHighlight(sel ? (IsTrashChoice(d) ? CardHighlight.Danger : CardHighlight.Selected) : fromRevealed ? CardHighlight.Playable : CardHighlight.None);
+                cv.SetDim(false);
+                if (sel) cv.Selected = 0.6f;
             }
 
             foreach (var t in tiles)
@@ -700,7 +788,8 @@ namespace KingdomDeck.Presentation
                 {
                     string range = d.Min == d.Max ? d.Min + "장" : (d.Min == 0 ? "최대 " + d.Max + "장" : d.Min + "~" + d.Max + "장");
                     string who = d.Player == Me && game.Current == Ai ? "<color=#ff9a8a>공격받음!</color> " : "";
-                    promptText.text = who + src + d.Reason + "\n<size=15><color=#a8977a>손패에서 " + range + "을 고른 뒤 확인 (선택 " + selected.Count + "장)</color></size>";
+                    string where = d.From == Zone.Revealed ? "가운데 덱 위 카드에서 " : "손패에서 ";
+                    promptText.text = who + src + d.Reason + "\n<size=15><color=#a8977a>" + where + range + "을 고른 뒤 확인 (선택 " + selected.Count + "장)</color></size>";
                     confirmBtn.Interactable = selected.Count >= d.Min && selected.Count <= d.Max;
                     confirmBtn.Label.text = selected.Count == 0 && d.Min == 0 ? "안 함" : "확인";
                     break;
@@ -709,10 +798,15 @@ namespace KingdomDeck.Presentation
                     promptText.text = src + d.Reason + "\n<size=15><color=#a8977a>공급처에서 빛나는 카드를 고르세요</color></size>";
                     break;
                 case DecisionKind.YesNo:
-                    promptText.text = "<color=#ff9a8a>공격받음!</color> " + d.Reason;
+                    bool reaction = d.Op == "reactionPrompt";
+                    promptText.text = (reaction ? "<color=#ff9a8a>공격받음!</color> " : src) + d.Reason;
+                    yesBtn.Label.text = reaction ? "공개한다" : "사용한다";
+                    noBtn.Label.text = "안 한다";
                     break;
             }
         }
+
+        static bool IsTrashChoice(PendingDecision d) => d.Op == "trashFromHand" || d.Op == "trashFromRevealed";
 
         // =====================================================================
         // 기록
