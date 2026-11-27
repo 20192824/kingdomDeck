@@ -344,8 +344,16 @@ namespace KingdomDeck.Presentation
 
                 case GameEventType.CardGained:
                 {
-                    var prev = game.Events[Mathf.Max(0, e.Seq - 1)];
-                    bool afterBuy = e.Seq > 0 && prev.Type == GameEventType.CardBought && prev.CardId == e.CardId;
+                    // 구매는 "구매 → 자원 변경 → 획득" 순서로 온다. 바로 앞 구매와 같은 카드면
+                    // 이미 날아가는 연출과 기록을 보여 줬으므로 다시 하지 않는다 (두 번 산 것처럼 보이던 문제)
+                    bool afterBuy = false;
+                    for (int k = e.Seq - 1; k >= 0 && k >= e.Seq - 3; k--)
+                    {
+                        var prev = game.Events[k];
+                        if (prev.Type == GameEventType.ResourcesChanged) continue;
+                        afterBuy = prev.Type == GameEventType.CardBought && prev.CardId == e.CardId && prev.Player == e.Player;
+                        break;
+                    }
                     if (!afterBuy)
                     {
                         LogEvent(e);
