@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d0193ed9aaf4a44429f02277a9478c5b, type: 3}
+  m_Name: CardVisualLibrary
+  m_EditorClassIdentifier: KingdomDeck.Presentation::KingdomDeck.Presentation.CardVisualLibrary
+  visuals:
+  - {fileID: 11400000, guid: 9b0d6e72713766f4bb906ce29c48f8d4, type: 2}
+  - {fileID: 11400000, guid: 1817c656db91b8a47a46a34d02b1f6fa, type: 2}
+  - {fileID: 11400000, guid: 33e2f2abbf6c6cd498554aaa827f8f6d, type: 2}
+  - {fileID: 11400000, guid: d67802e0e0e5fe945ad8220e464d1d93, type: 2}
+  - {fileID: 11400000, guid: 69ac6dd87f7c19c4894de934ba1a37e4, type: 2}
+  - {fileID: 11400000, guid: d11055470d6ce584aba85bacb0005a21, type: 2}
+  - {fileID: 11400000, guid: eb5dae2bf3d91b64b8594482ef1a061f, type: 2}
+  - {fileID: 11400000, guid: e3e8c2a724c739843817fc04641ee7c6, type: 2}
+  - {fileID: 11400000, guid: e013ce1770490ed48ad0f7e9a35b96e8, type: 2}
+  - {fileID: 11400000, guid: 372f833a925afca4ca302b6523b109b3, type: 2}
+  - {fileID: 11400000, guid: e1584a2e0ed2d5842aa36d72238941ba, type: 2}
+  - {fileID: 11400000, guid: 8e7add1dba5491a4a8d74f27bac07176, type: 2}
+  - {fileID: 11400000, guid: 9aae523526e5de9488237ad9f4349c67, type: 2}
+  - {fileID: 11400000, guid: 2fd94c26e52c7264781fd9efbaff7da1, type: 2}
+  - {fileID: 11400000, guid: e7e20562a27521a44bba581a84ccf6fc, type: 2}
+  - {fileID: 11400000, guid: 8700a300ab1d04143a222a4e7afc8cfe, type: 2}
+  - {fileID: 11400000, guid: 8551791b1f41a4b4bacf47078b44286f, type: 2}
+  - {fileID: 11400000, guid: 3561613a92b9e0b46af30346fcbf8eaf, type: 2}
+  - {fileID: 11400000, guid: c9279276961c3664b80bba88f3c75ec7, type: 2}

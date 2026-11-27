@@ -1,0 +1,14 @@
+{
+    "name": "KingdomDeck.AI",
+    "rootNamespace": "KingdomDeck.AI",
+    "references": ["KingdomDeck.Engine"],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": true
+}

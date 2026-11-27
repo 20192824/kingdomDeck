@@ -1,0 +1,14 @@
+{
+    "name": "KingdomDeck.Presentation.Editor",
+    "rootNamespace": "KingdomDeck.Presentation.EditorTools",
+    "references": ["KingdomDeck.Engine", "KingdomDeck.Presentation"],
+    "includePlatforms": ["Editor"],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
