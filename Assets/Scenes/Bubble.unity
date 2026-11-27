@@ -414,7 +414,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Bomber
   displayName: Player
-  maxBalloons: 1
+  maxBalloons: 4
   trappedColor: {r: 0.55, g: 0.85, b: 1, a: 1}
 --- !u!114 &380891918
 MonoBehaviour:
@@ -1109,7 +1109,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Bomber
   displayName: Bot
-  maxBalloons: 1
+  maxBalloons: 4
   trappedColor: {r: 0.55, g: 0.85, b: 1, a: 1}
 --- !u!114 &1145787556
 MonoBehaviour:

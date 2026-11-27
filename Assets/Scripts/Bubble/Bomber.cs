@@ -11,7 +11,7 @@ public class Bomber : MonoBehaviour
     private string displayName = "Player";
 
     [SerializeField, Tooltip("동시에 놓을 수 있는 물풍선 개수")]
-    private int maxBalloons = 1;
+    private int maxBalloons = 4;
 
     [SerializeField, Tooltip("죽었을 때 몸 색 (물방울에 갇힌 느낌)")]
     private Color trappedColor = new Color(0.55f, 0.85f, 1f);
