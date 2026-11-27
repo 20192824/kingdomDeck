@@ -15,7 +15,7 @@ namespace KingdomDeck.Presentation
         float shown, ghostV;
         int target;
         float flash;
-        const float Max = 50f;
+        const float Max = KingdomDeck.Engine.Game.StartingHp;
 
         public static HpBar Create(Transform parent, string title, Color color, bool alignRight)
         {
@@ -36,10 +36,10 @@ namespace KingdomDeck.Presentation
             var shine = UiKit.Image("Shine", bar.fill.transform, new Color(1, 1, 1, 0.18f), UiKit.RoundedSmall);
             shine.rectTransform.Place(new Vector2(0, 0.55f), Vector2.one, new Vector2(2, 0), new Vector2(-2, -1));
 
-            bar.value = UiKit.Text("Value", root.transform, "50", 28, Palette.Text, TextAnchor.MiddleCenter, FontStyle.Bold);
+            bar.value = UiKit.Text("Value", root.transform, KingdomDeck.Engine.Game.StartingHp.ToString(), 28, Palette.Text, TextAnchor.MiddleCenter, FontStyle.Bold);
             bar.value.rectTransform.Place(new Vector2(1, 0), new Vector2(1, 0.62f), new Vector2(-68, 2), new Vector2(-6, 0));
             bar.value.Shadowed(2f);
-            bar.shown = bar.ghostV = bar.target = 50;
+            bar.shown = bar.ghostV = bar.target = KingdomDeck.Engine.Game.StartingHp;
             bar.Apply();
             return bar;
         }

@@ -483,7 +483,7 @@ namespace KingdomDeck.Presentation
         // 성 상태 (연기, 함락)
         // =====================================================================
 
-        public void SetCastleHp(int p, int hp, int maxHp = 50)
+        public void SetCastleHp(int p, int hp, int maxHp = KingdomDeck.Engine.Game.StartingHp)
         {
             float lost = 1f - Mathf.Clamp01(hp / (float)maxHp);
             smokeRate[p] = lost < 0.3f ? 0f : (lost - 0.3f) * 6f;

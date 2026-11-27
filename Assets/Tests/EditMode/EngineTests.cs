@@ -66,7 +66,8 @@ namespace KingdomDeck.Tests
                 Assert.AreEqual(5, g.Players[p].Deck.Count);
                 Assert.AreEqual(7, g.Players[p].Count("copper"));
                 Assert.AreEqual(3, g.Players[p].Count("archers"));
-                Assert.AreEqual(50, g.CastleHp(p), "시작 체력은 50");
+                Assert.AreEqual(40, g.CastleHp(p), "시작 체력은 40");
+                Assert.AreEqual(40, Game.StartingHp);
             }
             Assert.AreEqual(17, g.SupplyOrder.Count);
             Assert.AreEqual(10, g.Kingdom.Count);
@@ -207,8 +208,9 @@ namespace KingdomDeck.Tests
         public void InstantEnd_WhenCastleFalls()
         {
             var g = TestUtil.NewGame();
-            for (int i = 0; i < 8; i++) g.Players[0].Discard.Add("dragon"); // 상대 체력 53-3-48 = 2
-            Assert.AreEqual(2, g.CastleHp(1));
+            for (int i = 0; i < 6; i++) g.Players[0].Discard.Add("dragon"); // 상대 체력 43-3-36-3 = 1
+            g.Players[0].Discard.Add("catapult");
+            Assert.AreEqual(1, g.CastleHp(1));
             TestUtil.WithHand(g, "gold", "silver", "archers", "archers", "archers");
             TestUtil.Ok(g, Command.PlayAllTreasures());
             TestUtil.Ok(g, Command.Buy("catapult"));
@@ -219,10 +221,32 @@ namespace KingdomDeck.Tests
         }
 
         [Test]
+        public void StartingHp40_SixDragonsSurvive_SeventhDestroys()
+        {
+            var g = TestUtil.WithHand(TestUtil.NewGame(), "gold", "gold", "silver", "copper", "copper");
+            // 손패를 바꾸면 궁수대 수가 달라지므로, 내 병기를 궁수대 3장 + 드래곤 6장으로 정확히 맞춘다
+            g.Players[0].Deck.RemoveAll(id => id == "archers");
+            g.Players[0].Discard.Clear();
+            g.Players[0].Discard.AddRange(new[] { "archers", "archers", "archers" });
+            Assert.AreEqual(40, g.CastleHp(1));
+            for (int i = 0; i < 6; i++) g.Players[0].Discard.Add("dragon");
+            Assert.AreEqual(4, g.CastleHp(1), "40 - 드래곤 6장(36) = 4, 아직 버팀");
+            Assert.IsFalse(g.IsOver);
+            int before = g.CastleHp(1);
+            TestUtil.Ok(g, Command.PlayAllTreasures());
+            TestUtil.Ok(g, Command.Buy("dragon"));
+            Assert.AreEqual(before - 6, g.CastleHp(1));
+            Assert.IsTrue(g.IsOver, "7번째 드래곤으로 함락");
+            Assert.AreEqual(EndReason.CastleDestroyed, g.EndReason);
+            Assert.AreEqual(0, g.Winner);
+        }
+
+        [Test]
         public void InstantEnd_CanBeTurnedOff()
         {
             var g = TestUtil.NewGame(instantEnd: false);
-            for (int i = 0; i < 8; i++) g.Players[0].Discard.Add("dragon");
+            for (int i = 0; i < 6; i++) g.Players[0].Discard.Add("dragon");
+            g.Players[0].Discard.Add("catapult");
             TestUtil.WithHand(g, "gold", "silver", "archers", "archers", "archers");
             int before = g.CastleHp(1);
             TestUtil.Ok(g, Command.PlayAllTreasures());
@@ -276,7 +300,7 @@ namespace KingdomDeck.Tests
             var last = g.Events.Last();
             Assert.IsNotNull(last.Snap);
             Assert.AreEqual(5, last.Snap.Players[0].Hand.Length);
-            Assert.AreEqual(50, last.Snap.Players[1].Hp);
+            Assert.AreEqual(40, last.Snap.Players[1].Hp);
             Assert.AreEqual(g.SupplyOrder.Count, last.Snap.Supply.Length);
         }
     }

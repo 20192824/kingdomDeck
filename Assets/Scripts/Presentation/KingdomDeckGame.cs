@@ -42,7 +42,7 @@ namespace KingdomDeck.Presentation
         bool skipQueue;
         float aiTimer;
         Snapshot shown;
-        readonly int[] shownHp = { 50, 50 };
+        readonly int[] shownHp = { Game.StartingHp, Game.StartingHp };
         readonly List<int> selected = new List<int>();
         readonly List<GameObject> ghosts = new List<GameObject>();
         bool menuOpen = true;
@@ -146,7 +146,7 @@ namespace KingdomDeck.Presentation
             {
                 // 첫 이벤트들의 스냅샷 전에 빈 손으로 시작
                 shown = null;
-                for (int p = 0; p < 2; p++) { shownHp[p] = 50; hpBars[p].Set(50, true); field.SetCastleHp(p, 50); }
+                for (int p = 0; p < 2; p++) { shownHp[p] = Game.StartingHp; hpBars[p].Set(Game.StartingHp, true); field.SetCastleHp(p, Game.StartingHp); }
                 RenderHand(new string[0], false);
                 RenderPlayArea(new string[0]);
             }
